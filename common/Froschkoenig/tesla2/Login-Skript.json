@@ -1,0 +1,125 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+const https = require("https");
+const sBasePathObjectData = getTeslaBasePathObjectData();
+const structure = getTeslaStructureArray();
+
+// {"username":"customer","password":"YwxEYsYe30V6Kgo7",
+// "email":"tesla@mail.wieckberg.de","force_sm_off":false}
+var BaseURL = "https://10.1.3.120/api";
+var loginURL = BaseURL + "/login/Basic";
+var requestURL1 = BaseURL + "/meters/aggregates";
+var requestURL2 = BaseURL + "/meters/site"
+var requestURL3 = BaseURL + "/meters/solar"
+var requestURL4 = BaseURL + "/system_status/soe"
+var requestURL5 = BaseURL + "/sitemaster"
+var requestURL6 = BaseURL + "/customer/registration"
+var requestURL7 = BaseURL + "/site_info"
+var requestURL8 = BaseURL + "/status"
+var requestURL9 = BaseURL + "/operation"
+var requestURL10 = BaseURL + "/solars"
+var requestURL11 = BaseURL + "/customer"
+var requestURL12 = BaseURL + "/networks"
+
+var username = "customer";
+var email = "tesla@mail.wieckberg.de";
+var password = "YwxEYsYe30V6Kgo7";
+var force_sm_off = false;
+var duringLogin = false;
+
+var request = require('request');
+
+var token = "";
+var loginTime = "";
+var agentOptions = {
+    host: '10.1.3.120',
+    port: 443,
+    path: '/',
+    rejectUnauthorized: false,
+};
+
+function doLogin() {
+    var agent = new https.Agent(agentOptions);
+    request({
+        url: loginURL,
+        method: 'POST',
+        json: {"username":username,"password":password,"email":email,"force_sm_off":force_sm_off},
+        agent: agent},
+        function (err, resp, body) {
+            if (err) log("Err: " + JSON.stringify(err),"error");
+            if (resp) {
+                if (resp.statusCode == 200) {
+                    token = resp.body.token;
+                    loginTime = resp.body.loginTime;
+                    log("TeslaLogin performed (" + resp.statusCode + ")! LoginTime='" + loginTime + "' / Token = '" + token + "'","info");
+                    duringLogin = false;
+                }
+                else {
+                    log("TeslaLogin failed (" + resp.statusCode + ")! Response='" + JSON.stringify(resp),"error");
+                }
+            }
+        }
+    );
+}
+
+function doRequest(queryNo) {
+    log("Starting request '" + queryNo + "' to powerwall...");
+    if (token.length == 0) {
+        log("No LoginToken! Performing login to powerwall...");
+        if (duringLogin) {
+            log("Already in login procedure (queryNo = " + queryNo + "). Waiting for login answer...","debug");
+        }
+        else {
+            duringLogin = true;
+            doLogin();
+        }
+    }
+    else {
+        var agent = new https.Agent(agentOptions);
+        var actRequest = structure.requests[queryNo];
+        var url = actRequest.url;
+        request({
+            url: url,
+            method: 'GET',
+            headers: {'Cookie': 'AuthCookie=' + token},
+            agent: agent},
+            function (err, resp, body) {
+                if (err) log("Err: " + JSON.stringify(err));
+                if (resp) {
+                    if (resp.statusCode == 200) {
+                        log("Answer for request " + queryNo + ": " + JSON.stringify(resp.body),"debug");
+                        var targetNode = sBasePathObjectData + "." + actRequest.rawdata.nodepath + "." + actRequest.rawdata.nodename;
+                        setState(targetNode, resp.body);
+                        duringLogin = false;
+                    }
+                    else {
+                        log("Request failed (" + resp.statusCode + ")! Response='" + JSON.stringify(resp),"error");
+                        token = "";
+                    }
+                }
+                else {
+                    log("ERROR! No response from powerwall...","error");
+                }
+            }
+        );
+    }
+}
+
+function doUpdate() {
+    doRequest(0);
+    doRequest(1);
+}
+
+// alle 1 min
+schedule("*/1 * * * *", doUpdate);
+
+// bei Skriptstart
+//createStates(); // Datenpunkte erstmal anlegen
+//setTimeout(function() { // 3s verzögert Abfrage erstmals ausführen
+//    updateTeslaAggregatesValues();
+//}, 3*1000);

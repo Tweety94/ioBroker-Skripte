@@ -1,0 +1,343 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+const sBasePathObjectData = getTeslaBasePathObjectData();
+const structure = getTeslaStructureArray();
+const bLogging = false;
+// Datenpunkt-ID, die beobachtet werden sollen
+var idJSON1 = sBasePathObjectData + "." +
+                    structure.requests[0].rawdata.nodepath + "." +
+                    structure.requests[0].rawdata.nodename; // Aggregates
+var idJSON2 = sBasePathObjectData + "." +
+                    structure.requests[1].rawdata.nodepath + "." +
+                    structure.requests[1].rawdata.nodename // Ladezustand
+
+var IDs = [idJSON1, idJSON2];
+
+on({id: IDs, change: 'any'}, function(obj){
+    //Mach irgendwas
+    var name = obj.name;
+    var jsonObj = JSON.parse(obj.state.val);
+
+    switch (name) {
+        case 'Anlagendaten':
+            if (bLogging) log('Case: Anlagendaten!');
+            // last_communication_time setzen
+            setState(sBasePathObjectData + ".actual.solar.last_communication_time", jsonObj.solar.last_communication_time);
+            setState(sBasePathObjectData + ".actual.site.last_communication_time", jsonObj.site.last_communication_time);
+            setState(sBasePathObjectData + ".actual.load.last_communication_time", jsonObj.load.last_communication_time);
+            setState(sBasePathObjectData + ".actual.battery.last_communication_time", jsonObj.battery.last_communication_time);
+            // instant_power setzen
+            setState(sBasePathObjectData + ".actual.solar.instant_power", jsonObj.solar.instant_power);
+            setState(sBasePathObjectData + ".actual.site.instant_power", jsonObj.site.instant_power);
+            setState(sBasePathObjectData + ".actual.load.instant_power", jsonObj.load.instant_power);
+            setState(sBasePathObjectData + ".actual.battery.instant_power", jsonObj.battery.instant_power);
+            // instant_reactive_power setzen
+            setState(sBasePathObjectData + ".actual.solar.instant_reactive_power", jsonObj.solar.instant_reactive_power);
+            setState(sBasePathObjectData + ".actual.site.instant_reactive_power", jsonObj.site.instant_reactive_power);
+            setState(sBasePathObjectData + ".actual.load.instant_reactive_power", jsonObj.load.instant_reactive_power);
+            setState(sBasePathObjectData + ".actual.battery.instant_reactive_power", jsonObj.battery.instant_reactive_power);
+            // instant_apparent_power setzen
+            setState(sBasePathObjectData + ".actual.solar.instant_apparent_power", jsonObj.solar.instant_apparent_power);
+            setState(sBasePathObjectData + ".actual.site.instant_apparent_power", jsonObj.site.instant_apparent_power);
+            setState(sBasePathObjectData + ".actual.load.instant_apparent_power", jsonObj.load.instant_apparent_power);
+            setState(sBasePathObjectData + ".actual.battery.instant_apparent_power", jsonObj.battery.instant_apparent_power);
+            // frequency
+            setState(sBasePathObjectData + ".actual.solar.frequency", jsonObj.solar.frequency);
+            setState(sBasePathObjectData + ".actual.site.frequency", jsonObj.site.frequency);
+            setState(sBasePathObjectData + ".actual.load.frequency", jsonObj.load.frequency);
+            setState(sBasePathObjectData + ".actual.battery.frequency", jsonObj.battery.frequency);
+            // energy_exported setzen
+            setState(sBasePathObjectData + ".actual.solar.energy_exported", jsonObj.solar.energy_exported);
+            setState(sBasePathObjectData + ".actual.site.energy_exported", jsonObj.site.energy_exported);
+            setState(sBasePathObjectData + ".actual.load.energy_exported", jsonObj.load.energy_exported);
+            setState(sBasePathObjectData + ".actual.battery.energy_exported", jsonObj.battery.energy_exported);
+            // energy_imported setzen
+            setState(sBasePathObjectData + ".actual.solar.energy_imported", jsonObj.solar.energy_imported);
+            setState(sBasePathObjectData + ".actual.site.energy_imported", jsonObj.site.energy_imported);
+            setState(sBasePathObjectData + ".actual.load.energy_imported", jsonObj.load.energy_imported);
+            setState(sBasePathObjectData + ".actual.battery.energy_imported", jsonObj.battery.energy_imported);
+            // instant_average_voltage
+            setState(sBasePathObjectData + ".actual.solar.instant_average_voltage", jsonObj.solar.instant_average_voltage);
+            setState(sBasePathObjectData + ".actual.site.instant_average_voltage", jsonObj.site.instant_average_voltage);
+            setState(sBasePathObjectData + ".actual.load.instant_average_voltage", jsonObj.load.instant_average_voltage);
+            setState(sBasePathObjectData + ".actual.battery.instant_average_voltage", jsonObj.battery.instant_average_voltage);
+            // instant_total_current
+            setState(sBasePathObjectData + ".actual.solar.instant_total_current", jsonObj.solar.instant_total_current);
+            setState(sBasePathObjectData + ".actual.site.instant_total_current", jsonObj.site.instant_total_current);
+            setState(sBasePathObjectData + ".actual.load.instant_total_current", jsonObj.load.instant_total_current);
+            setState(sBasePathObjectData + ".actual.battery.instant_total_current", jsonObj.battery.instant_total_current);
+            // i_a_current
+            setState(sBasePathObjectData + ".actual.solar.i_a_current", jsonObj.solar.i_a_current);
+            setState(sBasePathObjectData + ".actual.site.i_a_current", jsonObj.site.i_a_current);
+            setState(sBasePathObjectData + ".actual.load.i_a_current", jsonObj.load.i_a_current);
+            setState(sBasePathObjectData + ".actual.battery.i_a_current", jsonObj.battery.i_a_current);
+            // i_b_current
+            setState(sBasePathObjectData + ".actual.solar.i_b_current", jsonObj.solar.i_b_current);
+            setState(sBasePathObjectData + ".actual.site.i_b_current", jsonObj.site.i_b_current);
+            setState(sBasePathObjectData + ".actual.load.i_b_current", jsonObj.load.i_b_current);
+            setState(sBasePathObjectData + ".actual.battery.i_b_current", jsonObj.battery.i_b_current);
+            // i_c_current
+            setState(sBasePathObjectData + ".actual.solar.i_c_current", jsonObj.solar.i_c_current);
+            setState(sBasePathObjectData + ".actual.site.i_c_current", jsonObj.site.i_c_current);
+            setState(sBasePathObjectData + ".actual.load.i_c_current", jsonObj.load.i_c_current);
+            setState(sBasePathObjectData + ".actual.battery.i_c_current", jsonObj.battery.i_c_current);
+            // timeout
+            setState(sBasePathObjectData + ".actual.solar.timeout", jsonObj.solar.timeout);
+            setState(sBasePathObjectData + ".actual.site.timeout", jsonObj.site.timeout);
+            setState(sBasePathObjectData + ".actual.load.timeout", jsonObj.load.timeout);
+            setState(sBasePathObjectData + ".actual.battery.timeout", jsonObj.battery.timeout);
+            //log('A=' + sBasePathObjectData + ".actual.solar.instant_power" + "/B=" + jsonObj.solar.instant_power);
+/*
+            // Update energy values for today, thisWeek, thisMonth, thisYear
+            var myJSON = 0;
+            var myRAW = 0;
+
+            var nodes = ['today', 'thisWeek', 'thisMonth', 'thisYear'];
+            var myJSON = [ 
+                "solar" : {
+                    exported : jsonObj.solar.energy_exported,
+                    imported : jsonObj.solar.energy_imported
+                },
+                "site" : {
+                    exported : jsonObj.site.energy_exported,
+                    imported : jsonObj.site.energy_imported
+                },
+                "load" : {
+                    exported : jsonObj.load.energy_exported,
+                    imported : jsonObj.load.energy_imported
+                },
+                "battery" : {
+                    exported : jsonObj.battery.energy_exported,
+                    imported : jsonObj.battery.energy_imported
+                }                
+            ];
+
+            var actTypes = structure.requests[0].types;
+            for (var i=0; i<actTypes.length; i++) {
+                var sourceVal = sFrom + '.' + actTypes[i].destnode + '.' + sAttribute;
+                for (var j=0; j<nodes.length; j++) {
+                    var actNode = nodes[j];
+                    var pathTo = sTo + '.' + actNode + '.' + actTypes[i].destnode + '.raw.' + sAttribute + '_bp';
+                    setState(pathTo, getState(sourceVal).val);
+                    log('checkAttribute: Checking filling of ' + pathTo + '(' + status + ')');
+                }
+            }
+*/
+            // Update energy values for today, thisWeek, thisMonth, thisYear
+            //
+            // today
+            //
+
+            // SOLAR EXPORT
+            myJSON = jsonObj.solar.energy_exported;
+            myRAW = getState(sBasePathObjectData + '.store.today.solar.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.today.solar.energy_exported', myJSON - myRAW);
+            if (bLogging) log('SOLAR EXPORT today (Solarenergie): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // SOLAR IMPORT
+            myJSON = jsonObj.solar.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.today.solar.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.today.solar.energy_imported', myJSON - myRAW);
+            if (bLogging) log('SOLAR IMPORT today (XXX): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            // SITE EXPORT
+            var myJSON = jsonObj.site.energy_exported;
+            var myRAW = getState(sBasePathObjectData + '.store.today.site.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.today.site.energy_exported', myJSON - myRAW);
+            if (bLogging) log('SITE EXPORT today (zum Stromnetz): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // SITE IMPORT
+            myJSON = jsonObj.site.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.today.site.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.today.site.energy_imported', myJSON - myRAW);
+            if (bLogging) log('SITE IMPORT today (vom Stromnetz): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            // LOAD EXPORT
+            var myJSON = jsonObj.load.energy_exported;
+            var myRAW = getState(sBasePathObjectData + '.store.today.load.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.today.load.energy_exported', myJSON - myRAW);
+            if (bLogging) log('LOAD EXPORT today (XXX): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // LOAD IMPORT
+            myJSON = jsonObj.load.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.today.load.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.today.load.energy_imported', myJSON - myRAW);
+            if (bLogging) log('LOAD IMPORT today (Hausverbrauch): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            // BATTERY EXPORT
+            var myJSON = jsonObj.battery.energy_exported;
+            var myRAW = getState(sBasePathObjectData + '.store.today.battery.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.today.battery.energy_exported', myJSON - myRAW);
+            if (bLogging) log('BATTERY EXPORT today (von Powerwall): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // BATTERY IMPORT
+            myJSON = jsonObj.battery.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.today.battery.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.today.battery.energy_imported', myJSON - myRAW);
+            if (bLogging) log('BATTERY IMPORT today (zur Powerwall): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            //
+            // thisWeek
+            //
+
+            // SOLAR EXPORT
+            myJSON = jsonObj.solar.energy_exported;
+            myRAW = getState(sBasePathObjectData + '.store.thisWeek.solar.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.thisWeek.solar.energy_exported', myJSON - myRAW);
+            if (bLogging) log('SOLAR EXPORT thisWeek (Solarenergie): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // SOLAR IMPORT
+            myJSON = jsonObj.solar.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.thisWeek.solar.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.thisWeek.solar.energy_imported', myJSON - myRAW);
+            if (bLogging) log('SOLAR IMPORT thisWeek (XXX): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            // SITE EXPORT
+            var myJSON = jsonObj.site.energy_exported;
+            var myRAW = getState(sBasePathObjectData + '.store.thisWeek.site.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.thisWeek.site.energy_exported', myJSON - myRAW);
+            if (bLogging) log('SITE EXPORT thisWeek (zum Stromnetz): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // SITE IMPORT
+            myJSON = jsonObj.site.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.thisWeek.site.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.thisWeek.site.energy_imported', myJSON - myRAW);
+            if (bLogging) log('SITE IMPORT thisWeek (vom Stromnetz): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            // LOAD EXPORT
+            var myJSON = jsonObj.load.energy_exported;
+            var myRAW = getState(sBasePathObjectData + '.store.thisWeek.load.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.thisWeek.load.energy_exported', myJSON - myRAW);
+            if (bLogging) log('LOAD EXPORT thisWeek (XXX): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // LOAD IMPORT
+            myJSON = jsonObj.load.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.thisWeek.load.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.thisWeek.load.energy_imported', myJSON - myRAW);
+            if (bLogging) log('LOAD IMPORT thisWeek (Hausverbrauch): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            // BATTERY EXPORT
+            var myJSON = jsonObj.battery.energy_exported;
+            var myRAW = getState(sBasePathObjectData + '.store.thisWeek.battery.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.thisWeek.battery.energy_exported', myJSON - myRAW);
+            if (bLogging) log('BATTERY EXPORT thisWeek (von Powerwall): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // BATTERY IMPORT
+            myJSON = jsonObj.battery.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.thisWeek.battery.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.thisWeek.battery.energy_imported', myJSON - myRAW);
+            if (bLogging) log('BATTERY IMPORT thisWeek (zur Powerwall): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            //
+            // thisMonth
+            //
+
+            // SOLAR EXPORT
+            myJSON = jsonObj.solar.energy_exported;
+            myRAW = getState(sBasePathObjectData + '.store.thisMonth.solar.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.thisMonth.solar.energy_exported', myJSON - myRAW);
+            if (bLogging) log('SOLAR EXPORT thisMonth (Solarenergie): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // SOLAR IMPORT
+            myJSON = jsonObj.solar.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.thisMonth.solar.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.thisMonth.solar.energy_imported', myJSON - myRAW);
+            if (bLogging) log('SOLAR IMPORT thisMonth (XXX): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            // SITE EXPORT
+            var myJSON = jsonObj.site.energy_exported;
+            var myRAW = getState(sBasePathObjectData + '.store.thisMonth.site.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.thisMonth.site.energy_exported', myJSON - myRAW);
+            if (bLogging) log('SITE EXPORT thisMonth (zum Stromnetz): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // SITE IMPORT
+            myJSON = jsonObj.site.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.thisMonth.site.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.thisMonth.site.energy_imported', myJSON - myRAW);
+            if (bLogging) log('SITE IMPORT thisMonth (vom Stromnetz): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            // LOAD EXPORT
+            var myJSON = jsonObj.load.energy_exported;
+            var myRAW = getState(sBasePathObjectData + '.store.thisMonth.load.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.thisMonth.load.energy_exported', myJSON - myRAW);
+            if (bLogging) log('LOAD EXPORT thisMonth (XXX): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // LOAD IMPORT
+            myJSON = jsonObj.load.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.thisMonth.load.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.thisMonth.load.energy_imported', myJSON - myRAW);
+            if (bLogging) log('LOAD IMPORT thisMonth (Hausverbrauch): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            // BATTERY EXPORT
+            var myJSON = jsonObj.battery.energy_exported;
+            var myRAW = getState(sBasePathObjectData + '.store.thisMonth.battery.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.thisMonth.battery.energy_exported', myJSON - myRAW);
+            if (bLogging) log('BATTERY EXPORT thisMonth (von Powerwall): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // BATTERY IMPORT
+            myJSON = jsonObj.battery.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.thisMonth.battery.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.thisMonth.battery.energy_imported', myJSON - myRAW);
+            if (bLogging) log('BATTERY IMPORT thisMonth (zur Powerwall): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            //
+            // thisYear
+            //
+
+            // SOLAR EXPORT
+            myJSON = jsonObj.solar.energy_exported;
+            myRAW = getState(sBasePathObjectData + '.store.thisYear.solar.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.thisYear.solar.energy_exported', myJSON - myRAW);
+            if (bLogging) log('SOLAR EXPORT thisYear (Solarenergie): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // SOLAR IMPORT
+            myJSON = jsonObj.solar.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.thisYear.solar.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.thisYear.solar.energy_imported', myJSON - myRAW);
+            if (bLogging) log('SOLAR IMPORT thisYear (XXX): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            // SITE EXPORT
+            var myJSON = jsonObj.site.energy_exported;
+            var myRAW = getState(sBasePathObjectData + '.store.thisYear.site.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.thisYear.site.energy_exported', myJSON - myRAW);
+            if (bLogging) log('SITE EXPORT thisYear (zum Stromnetz): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // SITE IMPORT
+            myJSON = jsonObj.site.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.thisYear.site.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.thisYear.site.energy_imported', myJSON - myRAW);
+            if (bLogging) log('SITE IMPORT thisYear (vom Stromnetz): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            // LOAD EXPORT
+            var myJSON = jsonObj.load.energy_exported;
+            var myRAW = getState(sBasePathObjectData + '.store.thisYear.load.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.thisYear.load.energy_exported', myJSON - myRAW);
+            if (bLogging) log('LOAD EXPORT thisYear (XXX): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // LOAD IMPORT
+            myJSON = jsonObj.load.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.thisYear.load.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.thisYear.load.energy_imported', myJSON - myRAW);
+            if (bLogging) log('LOAD IMPORT thisYear (Hausverbrauch): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+            // BATTERY EXPORT
+            var myJSON = jsonObj.battery.energy_exported;
+            var myRAW = getState(sBasePathObjectData + '.store.thisYear.battery.raw.energy_exported_bp').val;
+            setState(sBasePathObjectData + '.store.thisYear.battery.energy_exported', myJSON - myRAW);
+            if (bLogging) log('BATTERY EXPORT thisYear (von Powerwall): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+            // BATTERY IMPORT
+            myJSON = jsonObj.battery.energy_imported;
+            myRAW = getState(sBasePathObjectData + '.store.thisYear.battery.raw.energy_imported_bp').val;
+            setState(sBasePathObjectData + '.store.thisYear.battery.energy_imported', myJSON - myRAW);
+            if (bLogging) log('BATTERY IMPORT thisYear (zur Powerwall): JSON=' + myJSON + '|RAW=' + myRAW + '|DIFF=' + (myJSON - myRAW));
+
+
+        break;
+        case 'Powerwall':
+            if (bLogging) log('Case: Powerwall!');
+            var percentage = jsonObj.percentage;
+            var maxPercentageValue = getState(sBasePathObjectData + '.store.today.maxBatteryLevel').val;
+            var minPercentageValue = getState(sBasePathObjectData + '.store.today.minBatteryLevel').val;
+            setState(sBasePathObjectData + ".actual.powerwall.percentage", percentage); //.toFixed(2)
+            if (bLogging) log('New Tesla battery level: percentage=' + percentage + '% (min=' + minPercentageValue + '% / max=' + maxPercentageValue + '%)');
+            if (percentage > maxPercentageValue || maxPercentageValue == null) {
+                setState(sBasePathObjectData + '.store.today.maxBatteryLevel', toFloat(percentage.toFixed(3)));
+            }
+            if (percentage < minPercentageValue || minPercentageValue == null) {
+                setState(sBasePathObjectData + '.store.today.minBatteryLevel', toFloat(percentage.toFixed(3)));
+            }
+        break;
+        default:
+            log('Fehler in Tesla-Powerwall2-Update(). Case: default','error');
+    }
+});

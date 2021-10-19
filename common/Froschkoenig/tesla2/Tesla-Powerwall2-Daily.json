@@ -1,0 +1,184 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+const sBasePathObjectData = getTeslaBasePathObjectData();
+const structure = getTeslaStructureArray();
+const iLogLevel = 50;
+const createStatesSwitch = false;
+const checkValuesSwitch = false;
+
+// Objekte ggf. anlegen und initialisieren
+function createStates() {
+    if (createStatesSwitch) {
+        // States für die Request-Daten
+        if (iLogLevel > 30) log('Creating states for saveData...');
+        var actTypes = structure.requests[0].types;
+        var actStructure = structure.saveData;
+        for (var i=0; i<actStructure.nodes.length; i++) {
+            var varDestBaseNode = sBasePathObjectData + "." + 
+                actStructure.nodePath + "." + 
+                actStructure.nodes[i];
+            if (iLogLevel > 40) log('CREATING OBJECTS FOR period ' + actStructure.nodes[i] + '=' + varDestBaseNode);
+            
+            // Struktur für Batteriestand der Periode anlegen
+            if (iLogLevel > 40) log('Creating battery data for period >' + actStructure.nodes[i] + '<');
+            for (var j=0; j<actStructure.data.length; j++) {
+                var actData = actStructure.data[j];
+                if (iLogLevel > 50) log('Creating object ' + actData.name + ' at ' + varDestBaseNode + '.' + actData.destnode + ' (battery data)');
+                createState(varDestBaseNode + '.' + actData.destnode, {
+                    read: true, 
+                    write: true, 
+                    name: actData.name,
+                    desc: actData.desc,
+                    type: actData.type
+                });                       
+            }
+            for (var j=0; j<actTypes.length; j++) {
+                // für jeden Typ einmal die Schleife
+                var actTypeName = actTypes[j].destnode;
+
+                // Struktur für Daten einer periode anlegen
+                if (iLogLevel > 40) log('Creating energy data for period >' + actStructure.nodes[i] + '< and type >' + actTypeName + '<');
+                for (var k=0; k<actStructure.typeData.length; k++) {
+                    var actTypeData = actStructure.typeData[k];
+                    if (iLogLevel > 50) log('Creating object ' + actTypeData.name + ' at ' + varDestBaseNode + '.' + actTypeName + '.' + actTypeData.destnode + ' (energy data)');
+                    createState(varDestBaseNode + '.' + actTypeName + '.' + actTypeData.destnode, {
+                        read: true, 
+                        write: true, 
+                        name: actTypeData.name,
+                        desc: actTypeData.desc,
+                        type: actTypeData.type
+                    });
+                } 
+            }
+        }
+    }
+    else {
+        log('Tesla-Powerwall2-Daily: CreateStates is switched off...')
+    }
+}
+
+function initialValues() {
+    checkValues(sBasePathObjectData + '.actual', sBasePathObjectData + '.store');
+}
+
+function resetValues(sPath) {
+    var sFrom = sBasePathObjectData + '.actual';
+    if (iLogLevel > 30) log('resetValues: Resetting values for ' + sPath);
+    setState(sPath + '.maxBatteryLevel', 0);
+    setState(sPath + '.minBatteryLevel', 100);
+    var actTypes = structure.requests[0].types;
+    for (var i=0; i<actTypes.length; i++) {
+        setState(sPath + '.' + actTypes[i].destnode + '.raw.energy_exported_bp',
+            getState(sFrom + '.' + actTypes[i].destnode + '.energy_exported').val);
+        setState(sPath + '.' + actTypes[i].destnode + '.raw.energy_imported_bp',
+            getState(sFrom + '.' + actTypes[i].destnode + '.energy_imported').val);
+        setState(sPath + '.' + actTypes[i].destnode + '.energy_exported', 0);
+        setState(sPath + '.' + actTypes[i].destnode + '.energy_imported', 0);
+    }
+}
+
+function checkAttribute(sFrom, sTo, sAttribute) {
+    if (iLogLevel > 30) log('checkAttribute: Checking filling of ' + sAttribute);
+    var actNodes = structure.saveData;
+    var actTypes = structure.requests[0].types;
+    for (var i=0; i<actTypes.length; i++) {
+        var sourceVal = sFrom + '.' + actTypes[i].destnode + '.' + sAttribute;
+        for (var j=0; j<actNodes.nodes.length; j++) {
+            var actNode = actNodes.nodes[j];
+            var pathTo = sTo + '.' + actNode + '.' + actTypes[i].destnode + '.raw.' + sAttribute + '_bp';
+            var value = getState(pathTo).val;
+            var status = '=>already full';
+            if (!value) {
+                status = '=> filling from ' + sourceVal;
+                setState(pathTo, getState(sourceVal).val);
+            }
+            if (iLogLevel > 40) log('checkAttribute: Checking filling of ' + pathTo + '(' + status + ')');
+
+        }
+    }
+}
+
+function checkValues(sFrom, sTo) {
+    if (checkValuesSwitch) {
+        if (iLogLevel > 30) log('checkValues: Checking values...');
+        checkAttribute(sFrom, sTo, 'energy_exported');
+        checkAttribute(sFrom, sTo, 'energy_imported');
+    }
+    else {
+        log('checkValues: Checking values is switched off...')
+    }
+}
+
+function copyAttribute(sFrom, sTo, sAttribute) {
+    var value = getState(sFrom + '.' + sAttribute).val;
+    if (iLogLevel > 50) log('copyAttribute: setState(' + sTo + '.' + sAttribute + ', getState(' + sFrom + '.' + sAttribute + ').val); [' + value + ']');
+    setState(sTo + '.' + sAttribute, value);
+}
+
+function copyValues(sFrom, sTo) {
+    if (iLogLevel > 30) log ('copyValues: Copying values from ' + sFrom + ' to ' + sTo);
+    copyAttribute(sFrom, sTo, 'maxBatteryLevel');
+    copyAttribute(sFrom, sTo, 'minBatteryLevel');
+    var actTypes = structure.requests[0].types;
+    for (var i=0; i<actTypes.length; i++) {
+        copyAttribute(sFrom, sTo, actTypes[i].destnode + '.raw.energy_exported_bp');
+        copyAttribute(sFrom, sTo, actTypes[i].destnode + '.raw.energy_imported_bp');
+    }
+}
+
+
+function storeTeslaAggregatesValues() {
+    var jetzt = new Date();
+    
+    var tag = jetzt.getDate();
+    var monat = jetzt.getMonth();
+    var wochentag = jetzt.getDay();
+    var datum = jetzt.toLocaleDateString();
+    var uhrzeit = jetzt.toLocaleTimeString();
+    if (iLogLevel > 10) log('UPDATING Tesla values from today (' + datum  + '|' + uhrzeit + ')... WT=' + wochentag + ' | tag=' + tag + ' | monat=' + monat);
+
+    // Jeden Tag die Tageswerte aktualisieren
+    if (iLogLevel > 20) log('UPDATING Tesla values (day)');
+    copyValues(sBasePathObjectData + '.store.yesterday', sBasePathObjectData + '.store.2days_ago');
+    copyValues(sBasePathObjectData + '.store.today', sBasePathObjectData + '.store.yesterday');
+    resetValues(sBasePathObjectData + '.store.today');
+    
+    // Jeden Montag die Wochenwerte aktualisieren
+    if (wochentag == 1) {
+        if (iLogLevel > 20) log('UPDATING Tesla values (week)');
+        copyValues(sBasePathObjectData + '.store.thisWeek', sBasePathObjectData + '.store.lastWeek');
+        resetValues(sBasePathObjectData + '.store.thisWeek');
+    }
+    // Jeden Ersten des Monats die Monatswerte aktualisieren
+    if (tag == 1) {
+        if (iLogLevel > 20) log('UPDATING Tesla values (month)');
+        copyValues(sBasePathObjectData + '.store.thisMonth', sBasePathObjectData + '.store.lastMonth');
+        resetValues(sBasePathObjectData + '.store.thisMonth');
+        // Jeden Ersten Januar die Jahreswerte aktualisieren
+        if (monat == 0) {
+            if (iLogLevel > 20) log('UPDATING Tesla values (year)');
+            copyValues(sBasePathObjectData + '.store.thisYear', sBasePathObjectData + '.store.lastYear');
+            resetValues(sBasePathObjectData + '.store.thisYear');
+        }
+    }
+}
+
+// jeden Tag 15 Sekunden nach 0:00 Uhr
+schedule('5 0 0 * * *', storeTeslaAggregatesValues);
+
+// bei Skriptstart
+createStates(); // Datenpunkte erstmal anlegen
+setTimeout(function() { // 10s verzögert Funktion erstmals ausführen
+    initialValues(); // Datenpunkte initialisieren
+}, 10*1000);
+
+/*
+setTimeout(function() { // 15s verzögert Funktion erstmals ausführen
+    storeTeslaAggregatesValues(); // Datenpunkte initialisieren
+}, 15*1000);
+*/
