@@ -1,0 +1,166 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+/* Weiteres Skript zur Überwachung des Uptime Datenpunktes im Unifi-Adapter
+{1}
+fragt alle zwei Minuten den Datenpunkt _uptime_by_uap des eingebuchten Gerätes ab
+wenn keine Änderung, dann Anwesenheit = false
+{1}
+18.10.2017 erstellt von lobomau auf Basis des Unifi Adapters von jens_maus
+           http://forum.iobroker.net/viewtopic.php?f=30&t=8556#p90883
+19.10.2017 angepasst von Pix (mehrere Geräte)
+{1}
+*/
+
+const logging = false;
+const fC = false; // forceCreation für createState
+
+const clients = {
+    "devices": [
+        {
+            "nutzer": "Torsten",
+            "mac": "20:cf:30:30:52:cf",
+            "name": "PC Toddi",
+            "geraet": "PC",
+            "conn": "LAN"
+        },
+        {
+            "nutzer": "Tomma",
+            "mac": "20:cf:30:ec:cb:d0",
+            "name": "PC Tomma",
+            "geraet": "PC",
+            "conn": "LAN"
+        },
+        {
+            "nutzer": "Luca",
+            "mac": "04:92:26:5a:4a:d4",
+            "name": "PC Luci",
+            "geraet": "PC",
+            "conn": "LAN"
+        },
+        {
+            "nutzer": "Luca2",
+            "mac": "12:34:56:78:9a:ab",
+            "name": "PC Luci (alte MAC)",
+            "geraet": "PC",
+            "conn": "LAN"
+        },
+        {
+            "nutzer": "Luca3",
+            "mac": "12:34:56:78:9a:aa",
+            "name": "PC Luci (uralte MAC)",
+            "geraet": "PC",
+            "conn": "LAN"
+        },
+        {
+            "nutzer": "Mathilda",
+            "mac": "30:e3:7a:78:bc:f7",
+            "name": "PC Tildi",
+            "geraet": "PC",
+            "conn": "LAN"
+        }, // Ende LAN devices
+        {
+            "nutzer": "Torsten",
+            "mac": "40:9c:28:67:74:d6",
+            "name": "Handy Toddi",
+            "geraet": "iPhone",
+            "conn": "WIFI"
+        },
+        {
+            "nutzer": "Tomma",
+            "mac": "6c:4d:73:bd:21:5e",
+            "name": "Handy Tomma",
+            "geraet": "iPhone",
+            "conn": "WIFI"
+        },
+        {
+            "nutzer": "Luca",
+            "mac": "14:60:cb:96:03:c8",
+            "name": "Handy Luci",
+            "geraet": "iPhone",
+            "conn": "WIFI"
+        },
+        {
+            "nutzer": "Mathilda",
+            "mac": "00:cd:fe:d2:69:fe",
+            "name": "Handy Mathilda",
+            "geraet": "iPhone",
+            "conn": "WIFI"
+        } // Ende WIFI devices
+    ],
+    "type" : [
+        {
+            name : "LAN Anwesenheit (USW)",
+            desc : "Anwesenheit über LAN Uptime-Datenpunkt des Unifi Adapters",            
+            node : "USW",
+            attr : "_uptime_by_usw"
+        },
+        {
+            name : "WLAN Anwesenheit (UAP)",
+            desc : "Anwesenheit über Uptime-Datenpunkt des Unifi Adapters",
+            node : "UAP",
+            attr : "_uptime_by_uap"
+        }
+    ]
+};
+
+// Ab hier nix mehr ändern ++++++++++++++++++++++
+function createStates() {
+    // WLAN + LAN
+    for (var j=0; j<clients.devices.length; j++) {
+        var sConn = getConnectionType(clients.devices[j].conn);
+        var idNODE = "javascript." + instance + ".Unifi.Anwesenheit." + clients.type[sConn].node + "." + clients.devices[j].nutzer;
+        createState(idNODE, false, fC, {
+            name: clients.type[sConn].name + ' - ' + clients.devices[j].name,
+            desc: clients.type[sConn].desc,
+            type: 'boolean',
+            def: false,
+            role: 'indicator'
+        });
+    }
+}
+
+// Typ ermitteln
+function getConnectionType(sType) { 
+    if (sType == "LAN") {
+        return 0;
+    }
+    else if (sType == "WIFI") {
+        return 1;
+    }
+return "ERROR";
+}
+
+function checkStatus () {
+    for (var i=0; i<clients.devices.length; i++) {
+        var sConn = getConnectionType(clients.devices[i].conn);
+        // Unifi abfragen
+        var sState = "unifi.0.default.clients." + clients.devices[i].mac + "." + clients.type[sConn].attr;
+        var bAnwesenheit = false;
+        if (existsState(sState)) {
+            var lchange = getState(sState).lc;
+            bAnwesenheit = (lchange - ((new Date().getTime()) - 120000) < 0 === true) ? false : true;
+
+            if (logging) log('Gerät ' + clients.devices[i].geraet + ' von ' + clients.devices[i].nutzer + ' ist ' + bAnwesenheit);
+        }
+        else {
+            if (logging) log('Datenpunkt von Gerät ' + clients.devices[i].geraet + ' von ' + clients.devices[i].nutzer + ' ist nicht vorhanden.');
+        }
+        // Datenpunkt verzögert beschreiben
+        var idNODE = "javascript." + instance + ".Unifi.Anwesenheit." + clients.type[sConn].node + "." + clients.devices[i].nutzer;
+        setStateDelayed(idNODE, bAnwesenheit, 1000);
+    }
+} 
+
+// alle 2min
+schedule("*/2 * * * *", checkStatus);
+
+// bei Skriptstart
+createStates(); // Datenpunkte erstmal anlegen
+setTimeout(function() { // 2s verzögert Abfrage erstmals ausführen
+    checkStatus();
+}, 2*1000);

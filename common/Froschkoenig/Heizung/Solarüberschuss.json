@@ -1,0 +1,56 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+/***************************************************************************
+Solarüberschuß nutzen
+
+Version: 0.0.1
+created by Tweety
+
+Dieses Skript reasgiert auf die Änderung der Homematic Variable
+
+und setzt entsprechd die Warmwassertemperatur auf 48°C oder 55°C
+
+============================================================================
+--- Changelog ---
+* 0.0.1:            Initial release
+
+============================================================================
+
+*/
+
+let idSensor_Trigger = 'hm-rega.0.26696'   // Temperatur des eigenen Sensor
+//let idSensor_Luftfeuchtigkeit = 'linkeddevices.0.Sensoren.Aussen.HUMIDITY'       // Luftfeuchtigkeit des eigenen Sensor
+
+
+// Trigger
+//on({ id: "system.adapter.daswetter.0.alive", val: false }, createData);
+on({ id: idSensor_Trigger }, valueTriggered);
+
+function valueTriggered() {
+    let value = getState(idSensor_Trigger).val;
+    log("Value triggered now");
+
+    if (value) {
+        log("value=" + value);
+/*
+sendTo('viessmannapi.0', 'action', {
+    feature: 'heating.circuits.0.operating.programs.comfort',
+    action: 'setTemperature',
+    payload: {targetTemperature: 20}
+});
+*/
+    }
+    else {
+        log("value=" + value);
+    }
+}
+
+
+
+
+

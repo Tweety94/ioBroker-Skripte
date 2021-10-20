@@ -1,0 +1,94 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+//
+//
+// Helper Funktionen
+// von Torsten Wieckberg (C) 2020
+//
+// Globale Hilfsfunktionen
+//
+
+// Datum formatieren
+function TimeFormater(iTime) { 
+    var sTime = "";
+    var tage = Math.floor(iTime / (1000*60*60*24));
+    iTime = iTime % (1000*60*60*24);
+    var std = Math.floor(iTime / (1000*60*60));
+    iTime = iTime % (1000*60*60);
+    var min = Math.round(iTime / (1000*60));
+    iTime = iTime % (1000*60);
+    var sec = Math.round(iTime / (1000));
+    if (tage > 0) sTime = tage + "T ";
+    if (std > 0) sTime = sTime + (std < 10 ? '0' : '') + std + 'h ';
+    sTime = sTime + (min < 10 ? '0' : '') + min + 'm ';
+    sTime = sTime + (sec < 10 ? '0' : '') + sec + 's';
+
+return sTime;
+}
+
+
+function createNewState(typ, path, desc, forceCreation, data) {
+
+    switch (typ) {
+        case 'string':
+            console.log('Case: string!');
+            createNewState(path, desc, forceCreation, {
+                name: data.name,
+                desc: data.desc,
+                type: data.type,
+                def: false,
+                role: 'indicator'
+            }); 
+        break;
+        case 'number':
+            console.log('Case: number!');
+        break;
+        case 'bad':
+            console.log('Case: bad!');
+        break;
+        default:
+            console.log('Case: default');
+    }
+}
+
+/*
+createState('arbeitsstatus', 0, {
+   read: true, 
+   write: true, 
+   desc: "Beschreibung",
+   type: "number", 
+   min: 0, 
+   max: 3, 
+   def: 0, 
+   states: {
+      0:"Arbeit",
+      1:"Urlaub",
+      2:"Frei",
+      3:"Krank"
+   }                
+});
+ 
+createState('heizung, 0, {
+   read: true, 
+   write: true, 
+   desc: "Beschreibung",
+   type: "number", 
+   min: 0, 
+   max: 2, 
+   def: 0, 
+   states: {
+      0:"Aus",
+      1:"An",
+      2:"Boost"
+   }                
+});
+{1}
+{1}
+
+
+*/

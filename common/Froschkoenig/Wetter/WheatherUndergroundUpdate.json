@@ -1,0 +1,205 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+/* Upload Skript zum Beschreiben der Personal Weather Station
+Autor: pix (30.6.2016), mit Anpassungen durch dtp und tow
+{1}
+nach dem Vorbild dieses HM-Skriptes von mape 
+http://homematic-forum.de/forum/viewtopic.php?f=27&t=31045&start=140#p293007
+{1}
+
+Voraussetzung: Anmeldung einer PWS unter 
+https://www.wunderground.com/personal-weather-station/signup (Hardware: other)
+
+12.06.2020/tow: Aufteilung in 2 Skripte (Update und Upload)
+*/
+
+var logging = false;
+
+var pws_id = "INEUST56";    // "Station ID" der PWS
+var pws_key = "PzyDpzHD";  // "Station Key" der PWS 
+
+var wasChangedKey = "0_userdata.0.calculation.weatherunderground.wasChanged";
+ 
+var idtempc 		= "linkeddevices.0.Sensoren.Aussen.ACTUAL_TEMPERATURE";	// Temperatur in °C
+var idhumidity		= "linkeddevices.0.Sensoren.Aussen.HUMIDITY";    		// Luftfeuchtigkeit in %
+var idwinddir		= "linkeddevices.0.Sensoren.Aussen.WIND_DIR";           // Windrichtung (0-360°)
+var idwindspeedkmh	= "linkeddevices.0.Sensoren.Aussen.WIND_SPEED"; 		// Windgeschwindigkeit in km/h
+//var idwindgustkmh	= "hm-rega.0.3745"; 		// Windgeschwindigkeit Peak in km/h
+var iddailyrainmm	= "linkeddevices.0.Sensoren.Aussen.RAIN_COUNTER"; 	   	// Regen heute in mm
+//var iddailynowrainmm = "hm-rega.0.3005"; 	   	// Regen heute in mm
+//var idpressure      = "hm-rega.0.2955";         // Luftdruck
+ 
+// Ab hier nix mehr anpassen
+ 
+var request = require('request');
+
+function weatherupdate(obj) {
+    //log("weatherupdate: Wert von '"  + obj.id + "' = " + obj.state.val);
+    setState(wasChangedKey, true);
+}
+
+function weatherupload() {
+    var wasChanged = getState("0_userdata.0.calculation.weatherunderground.wasChanged").val;
+    //log ('weatherupload: wasChanged=' + wasChanged);
+    if (wasChanged) {
+        log('weatherupdate: Uploading data...');
+        var tempc = getState(idtempc).val;
+        var tempf = ((tempc * 1.8) + 32).toFixed(2); 			    // Umwandlung °C in °F
+        //var barometera = getState(idpressure).val;
+        //var barometerb = (barometera*0.02952998751);
+        var humidity = getState(idhumidity).val;
+        var winddir = getState(idwinddir).val;
+        var windspeedkmh = getState(idwindspeedkmh).val;
+        var windspeedmph = (windspeedkmh * 0.621371).toFixed(3);    // Umwandlung km/h in mph
+        //var windgustkmh = getState(idwindgustkmh).val;
+        //var windgustmph = windgustkmh * 0.621371;  			    // Umwandlung km/h in mph
+        var dailyrainmm = getState(iddailyrainmm).val;
+        var dailyrainin = dailyrainmm * 0.0393701;  			    // Umwandlung mm in in
+        //var dailyrainnowmm = getState(iddailynowrainmm).val;
+        //var dailyrainnowin = dailyrainnowmm * 0.0393701;  		// Umwandlung mm in in 
+        let mw = 18.016; // Molekulargewicht des Wasserdampfes (kg/kmol)
+        let gk = 8214.3; // universelle Gaskonstante (J/(kmol*K))
+        let t0 = 273.15; // Absolute Temperatur von 0 °C (Kelvin)
+        var tk = tempc + t0; // Temperatur in Kelvin
+ 
+        var a, b;
+        if (tempc >= 0) {
+          a = 7.5;
+          b = 237.3;
+        } else if (tempc < 0) {
+          a = 7.6;
+          b = 240.7;
+        }
+ 
+        // Sättigungsdampfdruck (hPa)
+        var sdd = 6.1078 * Math.pow(10, (a*tempc)/(b+tempc));
+ 
+        // Dampfdruck (hPa)
+        var dd = sdd * (humidity/100);
+ 
+        // Wasserdampfdichte bzw. absolute Feuchte (g/m3)
+        var af = Math.pow(10,5) * mw/gk * dd/tk;         
+ 
+        // v
+        var v = Math.log10(dd/6.1078);
+ 
+        // Taupunkttemperatur (°C)
+        var td = (b*v) / (a-v);
+        var taupkt = td.toFixed(2);
+        var taupktf = ((td * 1.8) + 32).toFixed(2);  
+
+        var softwaretype = 'TweetySoft';
+        var weatherURL = 'http://weatherstation.wunderground.com/weatherstation/updateweatherstation.php?ID=' + pws_id + '&PASSWORD=' + pws_key + '&dateutc=now&tempf=' + tempf + '&humidity=' + humidity + '&winddir=' + winddir + '&windspeedmph=' + windspeedmph + /*'&windgustmph=' + windgustmph +*/ '&dewptf=' + taupktf + '&dailyrainin=' + dailyrainin + /*'&rainin=' + dailyrainnowin + '&baromin=' + barometerb +*/ '&softwaretype=' + softwaretype + '&action=updateraw';
+    
+        try {
+            request(weatherURL,function (error, response, body) {
+                if (!error && response.statusCode == 200) {
+                // Update ok
+                log('Wunderground Personal Weather Station successfully updated','debug');
+                setState("0_userdata.0.calculation.weatherunderground.wasChanged", false);
+                } else {
+                    log('Error updating Wunderground PWS (Status Code' + response.statusCode + ')', 'warn');
+                    log(error,'error');
+                }
+            });
+        } catch (e) {
+            log('Fehler (try) beim Update der Wunderground Personal Weather Station (PWS): ' + e, 'error');
+        }
+        if (logging === true) {
+            log ('weatherupdate: Daten wurden an Wunderground gesendet', 'info');
+            log ('Temperatur : ' + tempc + '°C' + ' (' + tempf + 'F)');
+            //log ('Luftdruck : ' + barometera + 'hPa' + ' (' + barometerb + 'Hg)');
+            log ('Luftfeuchte : ' + humidity + ' %');
+            log ('Windrichtung : ' + winddir);
+            log ('Windgeschwindigkeit : ' + windspeedkmh + ('km/h') + ' (' + windspeedmph + ' mph)');
+            //log ('Windgeschwindigkeit Peak : ' + windgustkmh + ('km/h') + ' (' + windgustmph + ' mph)');
+            //log ('Regen : Aktuell ' + dailyrainnowmm + ('mm  und am Tag: ') + ' (' + dailyrainmm + ' mm)');
+            log ('Regenmenge des Tages : ' + dailyrainmm + 'mm');
+            log ('--------------------------------------------------------------------------');
+            log ('Taupunkt : ' + taupkt + ' °C' + '(' + taupktf + ' F)');
+            log ('--------------------------------------------------------------------------');
+        }
+    }
+    else {
+            log("weatherupdate: No update sent because no new value found.", "debug");
+    }
+}
+ 
+on(idtempc, weatherupdate); 		// aktualisieren, wenn neuer Temperaturwert von HM-Kombisensor
+on(idhumidity, weatherupdate); 		// aktualisieren, wenn neuer Luftfeuchtigkeitswert von HM-Kombisensor
+on(idwinddir, weatherupdate); 		// aktualisieren, wenn neuer Windrichtungswert von HM-Kombisensor
+on(idwindspeedkmh, weatherupdate); 	// aktualisieren, wenn neuer Windgeschwindigkeitswert von HM-Kombisensor
+//on(idwindgustkmh, weatherupdate); 	// aktualisieren, wenn neuer Windgeschwindigkeitswert von HM-Kombisensor
+//on(iddailynowrainmm, weatherupdate);// aktualisieren, wenn neuer Regenwert von HM-Kombisensor
+on(iddailyrainmm, weatherupdate); 	// aktualisieren, wenn neuer Regenwert von HM-Kombisensor
+//on(idpressure, weatherupdate);      // aktualisieren, wenn neuer Luftdruckwert von HM-Kombisensor
+
+// jede Minute Upload prüfen
+schedule('* * * * *', weatherupload);
+
+/*
+action [action=updateraw] -- always supply this parameter to indicate you are making a weather observation upload
+ID [ID as registered by wunderground.com]
+PASSWORD [Station Key registered with this PWS ID, case sensitive]
+
+dateutc - [YYYY-MM-DD HH:MM:SS (mysql format)] In Universal Coordinated Time (UTC) Not local time
+
+winddir - [0-360 instantaneous wind direction]
+windspeedmph - [mph instantaneous wind speed]
+windgustmph - [mph current wind gust, using software specific time period]
+windgustdir - [0-360 using software specific time period]
+windspdmph_avg2m  - [mph 2 minute average wind speed mph]
+winddir_avg2m - [0-360 2 minute average wind direction]
+windgustmph_10m - [mph past 10 minutes wind gust mph ]
+windgustdir_10m - [0-360 past 10 minutes wind gust direction]
+humidity - [% outdoor humidity 0-100%]
+dewptf- [F outdoor dewpoint F]
+tempf - [F outdoor temperature]
+* for extra outdoor sensors use temp2f, temp3f, and so on
+
+rainin - [rain inches over the past hour)] -- the accumulated rainfall in the past 60 min
+dailyrainin - [rain inches so far today in local time]
+baromin - [barometric pressure inches]
+weather - [text] -- metar style (+RA)
+clouds - [text] -- SKC, FEW, SCT, BKN, OVC
+soiltempf - [F soil temperature]
+* for sensors 2,3,4 use soiltemp2f, soiltemp3f, and soiltemp4f
+soilmoisture - [%]
+* for sensors 2,3,4 use soilmoisture2, soilmoisture3, and soilmoisture4
+leafwetness  - [%]
++ for sensor 2 use leafwetness2
+solarradiation - [W/m^2]
+UV - [index]
+visibility - [nm visibility]
+indoortempf - [F indoor temperature F]
+indoorhumidity - [% indoor humidity 0-100]
+
+Pollution Fields:
+
+AqNO - [ NO (nitric oxide) ppb ]
+AqNO2T - (nitrogen dioxide), true measure ppb
+AqNO2 - NO2 computed, NOx-NO ppb
+AqNO2Y - NO2 computed, NOy-NO ppb
+AqNOX - NOx (nitrogen oxides) - ppb
+AqNOY - NOy (total reactive nitrogen) - ppb
+AqNO3 -NO3 ion (nitrate, not adjusted for ammonium ion) UG/M3
+AqSO4 -SO4 ion (sulfate, not adjusted for ammonium ion) UG/M3
+AqSO2 -(sulfur dioxide), conventional ppb
+AqSO2T -trace levels ppb
+AqCO -CO (carbon monoxide), conventional ppm
+AqCOT -CO trace levels ppb
+AqEC -EC (elemental carbon) – PM2.5 UG/M3
+AqOC -OC (organic carbon, not adjusted for oxygen and hydrogen) – PM2.5 UG/M3
+AqBC -BC (black carbon at 880 nm) UG/M3
+AqUV-AETH  -UV-AETH (second channel of Aethalometer at 370 nm) UG/M3
+AqPM2.5 - PM2.5 mass - UG/M3
+AqPM10 - PM10 mass - PM10 mass
+AqOZONE - Ozone - ppb
+softwaretype - [text] ie: WeatherLink, VWS, WeatherDisplay
+
+*/

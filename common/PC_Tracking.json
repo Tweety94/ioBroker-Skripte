@@ -1,0 +1,282 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+// Definition Login
+
+//const sLucaMAC = '12:34:56:78:9a:aa';
+//const sLucaMAC = '12:34:56:78:9a:ab';
+const aData = [
+    {
+        name : "Luca PC",
+        mac  : "04:92:26:5a:4a:d4",
+        node : "luca-pc"
+    },
+    {
+        name : "Mathilda PC",
+        mac  : "30:e3:7a:78:bc:f7",
+        node : "mathilda-pc"
+    }    
+];
+
+const sUnifiPath = "unifi.0.default.clients.";
+const sObjectPath = "javascript." + instance + ".uptime.";
+const bLogging = true;
+
+//const sLucaMAC = '04:92:26:5a:4a:d4';
+//const sLucaPCUnifi = 'unifi.0.default.clients.' + sLucaMAC;
+//const sLucaPCObjects = 'javascript.0.uptime.luca-pc';
+
+var iInitNow = Date.now();
+
+// Objekte ggf. anlegen und initialisieren
+for (var i = 0; i<aData.length; i++) {
+    var sThisUnifiPath = sUnifiPath + aData[i].mac;
+    var sThisObjectPath = sObjectPath + aData[i].node;
+    
+    var iInitLastSeenActual = getState(sThisUnifiPath + '.last_seen').val;
+    var iInitUptime = getState(sThisObjectPath + '.uptime').val;
+
+    createState(sThisObjectPath + '.raw.is_now', iInitNow, {
+        read: true, 
+        write: true, 
+        desc: "Beschreibung", 
+        type: "number", 
+        min: 0, 
+        def: 0
+    });
+    createState(sThisObjectPath + '.raw.last_seen_actual', iInitLastSeenActual, {
+        read: true, 
+        write: true, 
+        desc: "Beschreibung", 
+        type: "string"
+    });
+    createState(sThisObjectPath + '.raw.uptime', iInitUptime, {
+        read: true, 
+        write: true, 
+        desc: "Beschreibung", 
+        type: "number", 
+        min: 0, 
+        def: 0
+    });
+    createState(sThisObjectPath + '.raw.last_seen_stored', iInitLastSeenActual, {
+        read: true, 
+        write: true, 
+        desc: "Beschreibung", 
+        type: "number", 
+        min: 0, 
+        def: 0
+    });
+    createState(sThisObjectPath + '.raw.is_online_since', 0, {
+        read: true, 
+        write: true, 
+        desc: "Beschreibung", 
+        type: "number", 
+        min: 0, 
+        def: 0
+    });
+    createState(sThisObjectPath + '.raw.is_offline_since', iInitLastSeenActual * 1000, {
+        read: true, 
+        write: true, 
+        desc: "Beschreibung", 
+        type: "number", 
+        min: 0, 
+        def: 0
+    });
+    createState(sThisObjectPath + '.is_now', formatDate(iInitNow, "TT.MM.JJJJ SS:mm"), {
+        read: true,
+        write: true, 
+        desc: "Beschreibung", 
+        type: "string", 
+        def: ""
+    });
+    createState(sThisObjectPath + '.last_seen_actual', formatDate(iInitLastSeenActual, "TT.MM.JJJJ SS:mm"), {
+        read: true,
+        write: true, 
+        desc: "Beschreibung", 
+        type: "string", 
+        def: ""
+    });
+    createState(sThisObjectPath + '.log', formatDate(iInitNow, "TT.MM.JJJJ SS:mm") + ' initial offline\n', {
+        read: true,
+        write: true, 
+        desc: "Beschreibung", 
+        type: "string", 
+        def: ""
+    });
+    createState(sThisObjectPath + '.online_since', "", {
+        read: true,
+        write: true, 
+        desc: "Beschreibung", 
+        type: "string", 
+        def: ""
+    });
+    createState(sThisObjectPath + '.online_time', "", {
+        read: true, 
+        write: true, 
+        desc: "Beschreibung", 
+        type: "string", 
+        def: ""
+    });
+    createState(sThisObjectPath + '.offline_since', formatDate(iInitLastSeenActual * 1000, "TT.MM.JJJJ SS:mm"), {
+        read: true,
+        write: true, 
+        desc: "Beschreibung", 
+        type: "string", 
+        def: ""
+    });
+    createState(sThisObjectPath + '.offline_time', "", {
+        read: true, 
+        write: true, 
+        desc: "Beschreibung", 
+        type: "string", 
+        def: "" 
+    });
+    createState(sThisObjectPath + '.uptime', TimeFormater(iInitUptime * 1000), {
+        read: true, 
+        write: true, 
+        desc: "Beschreibung", 
+        type: "string", 
+        def: "" 
+    });
+    createState(sThisObjectPath + '.status', false, {
+        read: true,
+        write: true, 
+        desc: "Beschreibung", 
+        type: "boolean", 
+        def: false, 
+        states: "false:Offline; true:Online"
+    });
+    // Test
+    createState(sThisObjectPath + '.raw._uptime_by_usw', 0, {
+        read: true, 
+        write: true, 
+        desc: "Beschreibung", 
+        type: "number", 
+        min: 0, 
+        def: 0
+    });
+    createState(sThisObjectPath + '._uptime_by_usw', TimeFormater(0), {
+        read: true, 
+        write: true, 
+        desc: "Beschreibung", 
+        type: "string", 
+        def: "" 
+    });
+    createState(sThisObjectPath + '.raw._last_seen_by_usw', 0, {
+        read: true, 
+        write: true, 
+        desc: "Beschreibung", 
+        type: "number", 
+        min: 0, 
+        def: 0
+    });
+    createState(sThisObjectPath + '._last_seen_by_usw', TimeFormater(0), {
+        read: true, 
+        write: true, 
+        desc: "Beschreibung", 
+        type: "string", 
+        def: "" 
+    });
+}
+
+// Datum formatieren
+function TimeFormater(iTime) { 
+    var sTime = "";
+    var tage = Math.floor(iTime / (1000*60*60*24));
+    iTime = iTime % (1000*60*60*24);
+    var std = Math.floor(iTime / (1000*60*60));
+    iTime = iTime % (1000*60*60);
+    var min = Math.round(iTime / (1000*60));
+    iTime = iTime % (1000*60);
+    var sec = Math.round(iTime / (1000));
+    if (tage > 0) sTime = tage + "T ";
+    if (std > 0) sTime = sTime + (std < 10 ? '0' : '') + std + 'h ';
+    sTime = sTime + (min < 10 ? '0' : '') + min + 'm ';
+    sTime = sTime + (sec < 10 ? '0' : '') + sec + 's';
+
+return sTime;
+}
+
+// Luca PC loggen (scheduler)
+schedule('* * * * *', function() { // jede Minute
+    var iNow = Date.now();
+    for (var i = 0; i<aData.length; i++) {
+        var sThisUnifiPath = sUnifiPath + aData[i].mac;
+        var sThisObjectPath = sObjectPath + aData[i].node;
+        var iLastSeenActualState = getState(sThisUnifiPath + '.last_seen'); /*
+        if (iLastSeenActualState) {
+            var iLastSeenActual = iLastSeenActualState.val;
+            var iUptime = getState(sThisUnifiPath + '.uptime').val;
+            // Test
+            var iUptime1 = getState(sThisUnifiPath + '._uptime_by_usw').val;
+            var iUptime2 = getState(sThisUnifiPath + '._last_seen_by_usw').val;
+
+            var iLastSeenStored = getState(sThisObjectPath + '.raw.last_seen_stored').val;
+            var iOnlineSince = getState(sThisObjectPath + '.raw.is_online_since').val;
+            var iOfflineSince = getState(sThisObjectPath + '.raw.is_offline_since').val;
+            var iStatus = getState(sThisObjectPath + '.status').val;
+
+            setState(sThisObjectPath + '.raw.last_seen_actual', iLastSeenActual);
+            setState(sThisObjectPath + '.raw.is_now', iNow);
+            setState(sThisObjectPath + '.raw.uptime', iUptime);
+            setState(sThisObjectPath + '.is_now', formatDate(iNow, "TT.MM.JJJJ SS:mm"));
+            setState(sThisObjectPath + '.last_seen_actual', formatDate(iLastSeenActual, "TT.MM.JJJJ SS:mm"));
+            setState(sThisObjectPath + '.uptime', TimeFormater(iUptime * 1000));
+            // Test
+            setState(sThisObjectPath + '.raw._uptime_by_usw', iUptime1);
+            setState(sThisObjectPath + '._uptime_by_usw', TimeFormater(iUptime1 * 1000));
+            setState(sThisObjectPath + '.raw._last_seen_by_usw', iUptime2);
+            setState(sThisObjectPath + '._last_seen_by_usw', formatDate(iUptime2, "TT.MM.JJJJ SS:mm"));
+
+            if (iStatus) {
+                // is online
+                if (iNow - iLastSeenActual * 1000 > 180000) { // mehr als 3min?
+                    // online => offline
+                    if (bLogging) console.log(aData[i].name + ' loggen is running (online => offline)');
+                    setState(sThisObjectPath + '.status', false);
+                    setState(sThisObjectPath + '.raw.last_seen_stored', iLastSeenActual);
+                    setState(sThisObjectPath + '.raw.is_offline_since', iNow);
+                    setState(sThisObjectPath + '.offline_since', formatDate(iLastSeenActual, "TT.MM.JJJJ SS:mm"));
+                    setState(sThisObjectPath + '.offline_time', TimeFormater(iNow - iLastSeenActual * 1000));
+                    var sLog = getState(sThisObjectPath + '.log').val;
+                    sLog = sLog + formatDate(iNow, "TT.MM.JJJJ SS:mm") + ': gone offline (uptime:' + TimeFormater(iUptime * 1000) + ')\n';
+                    setState(sThisObjectPath + '.log', sLog);
+                    if (bLogging) console.log('STATUS CHANGED: ' + aData[i].name + ' (MAC: ' + aData[i].mac + ') ' + formatDate(iNow, "TT.MM.JJJJ SS:mm") + ' gone offline (uptime: ' + TimeFormater(iUptime * 1000) + ')');
+                }
+                else {
+                    // online => online
+                    if (bLogging) console.log(aData[i].name + ' loggen is running (online => online since ' + formatDate(iOnlineSince, "TT.MM.JJJJ SS:mm") + ' Uhr) [Diff: ' + TimeFormater(iNow - iLastSeenActual * 1000) + ']');
+                    setState(sThisObjectPath + '.online_time', TimeFormater(iNow - iOnlineSince));
+                }
+            }
+            else {
+                // is offline
+                if (iLastSeenStored == iLastSeenActual) {
+                    // offline => offline
+                    if (bLogging) console.log(aData[i].name + ' loggen is running (offline => offline since ' + formatDate(iOfflineSince, "TT.MM.JJJJ SS:mm") + ' Uhr) [Diff: ' + TimeFormater(iNow - iLastSeenActual * 1000) + ']');
+                    setState(sThisObjectPath + '.offline_time', TimeFormater(iNow - iOfflineSince));
+                }
+                else {
+                    // offline => online
+                    if (bLogging) console.log(aData[i].name + ' loggen is running (offline => online)');
+                    setState(sThisObjectPath + '.status', true);
+                    setState(sThisObjectPath + '.raw.last_seen_stored', iLastSeenActual);
+                    setState(sThisObjectPath + '.raw.is_online_since', iNow);
+                    setState(sThisObjectPath + '.online_since', formatDate(iNow, "TT.MM.JJJJ SS:mm"));
+                    setState(sThisObjectPath + '.online_time', TimeFormater(0));
+                    var sLog = getState(sThisObjectPath + '.log').val;
+                    sLog = sLog + formatDate(iNow, "TT.MM.JJJJ SS:mm") + ': gone online' + '\n';
+                    setState(sThisObjectPath + '.log', sLog);
+                    if (bLogging) console.log('STATUS CHANGED: ' + aData[i].name + ' (MAC: ' + aData[i].mac + ') ' + formatDate(iNow, "TT.MM.JJJJ SS:mm") + ' gone online');
+                }
+            }
+        }
+        else {
+            log('Unifi Node >' + sThisUnifiPath + '< (' + aData[i].name + ') not found!', "warn");
+        } */
+    } 
+});

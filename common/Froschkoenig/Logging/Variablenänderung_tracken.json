@@ -1,0 +1,78 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+// insidetemperature changed: hm-rpc.0.000A98A9A4D796.1.ACTUAL_TEMPERATURE
+// outsidetemperature changed: hm-rpc.0.001858A996B997.1.ACTUAL_TEMPERATURE
+// Lightsensor changed: hm-rpc.0.001858A996B997.1.ILLUMINATION
+
+// Datenpunkt-ID für Innentemperatur
+var idJSON1a = "hm-rpc.0.000A98A9A4DCDB.1.ACTUAL_TEMPERATURE"; // EG Gast
+var idJSON1b = "hm-rpc.0.000A98A9A4D796.1.ACTUAL_TEMPERATURE"; // EG Wohnzimmer
+var idJSON1c = "hm-rpc.0.000A98A9A4DCDB.1.ACTUAL_TEMPERATURE"; // OG Bad
+var idJSON1d = "hm-rpc.0.000A98A9A9BEC5.1.ACTUAL_TEMPERATURE"; // OG Ankleide
+var idJSON1e = "hm-rpc.0.000A98A9A4D821.1.ACTUAL_TEMPERATURE"; // OG Arbeitszimmer
+
+// Datenpunkt-ID für Außentemperatur
+var idJSON2 = "hm-rpc.0.001858A996B997.1.ACTUAL_TEMPERATURE";
+// Datenpunkt-ID für Lichtsensor
+var idJSON3 = "linkeddevices.0.Calculation.Illumination";
+//var idJSON3 = "hm-rpc.0.001858A996B997.1.ILLUMINATION";
+// Datenpunkt-ID für Lichtsensor Durchschnittswert
+var idJSON4 = "javascript.0.calculation.illumination.average";
+
+//
+// Beispiele:
+//
+/*
+on({id: 'hm-rpc.0.OEQ0333XXX.1.STATE', change: 'any'}, function (obj) {
+  setState("hm-rpc.0.OEQ0816XXX.1.STATE",obj.state.val);
+});
+
+var idTaster    = ["ID1", "ID2", "ID3", "ID4"];
+on({id: idTaster, val: true}, function(){
+    //Mach irgendwas
+});
+*/ 
+
+var IDs = [idJSON3];
+//var IDs = [idJSON1a, idJSON1b, idJSON1c, idJSON1d, idJSON1e, idJSON2, idJSON3, idJSON4];
+
+on({id: IDs, change: 'any'}, function(obj){
+    //Mach irgendwas
+    console.log("Wert von '"  + obj.id + "' = " + obj.state.val);
+});
+
+
+
+/*
+function IDchanged(dp) {
+    //var sValue = getState(dp.state).val;
+    var sValue = dp.state.val;
+    log(dp + ': ' + sValue);
+}
+*/
+/*
+function onChange(id) {
+   var val1 = getState(id1).val;
+   var val2 = getState(id2).val;
+   console.log(id1 +  ' = ' + val1 + '; ' + id2 + ' = ' + val2);
+}
+
+// triggern bei Wertänderung für alle IDs
+on(IDs, onChange(dp));
+*/
+
+/*
+on(idJSON1, IDchanged(idJSON1));
+on(idJSON2, IDchanged(idJSON2));
+on(idJSON3, IDchanged(idJSON3));
+
+// triggern bei Wertänderung für ID 3
+on(idJSON3, function(dp) {
+    log('DP LOG:' + dp.state.val);
+    IDchanged(dp.state.val);
+});*/

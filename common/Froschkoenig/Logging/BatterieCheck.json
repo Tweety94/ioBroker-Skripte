@@ -1,0 +1,84 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+//
+// LOWBAT-Meldungen
+// 
+// Skript aus ioBroker Forum
+// https://www.iobroker.net/docu/index-310.htm?page_id=2936&lang=de
+// angepaßt 2020 von T.Wieckberg
+
+const path = "0_userdata.0.status.batteries"; // Pfad zu Objekten im javascript-Adapter
+const fC = false; // Objekte neu erstellen?
+const logging = false;
+
+const id_possibleLowbat = path + ".possibleLowbat";
+const id_realLowbat = path + ".realLowbat";
+const id_textLowbat = path + ".textLowbat";
+
+createState(id_possibleLowbat, 0, fC, {
+    name: "Lowbat - Anzahl Batteriegeräte",
+    type: "number",
+    role: "value"
+});
+createState(id_realLowbat, 0, fC, {
+    name: "Lowbat - Anzahl leere Geräte",
+    type: "number",
+    role: "value"
+});
+createState(id_textLowbat, " ", fC, {
+    name: "Lowbat - Text",
+    type: "string",
+    role: "value"
+});
+
+//createState('zählenLowbat.möglicheLOWBAT', 0, {type: 'number'});   // wenn benötigt: Anzahl der vorhandenen LOWBAT
+//createState('zählenLowbat.anzahlLOWBAT', 0, {type: 'number'});     // wenn benötigt: Anzahl der tatsächlichen LOWBAT
+//createState('zählenLowbat.textLOWBAT', " ", {type: 'string'});     // Anzeige der LOWBAT
+
+//var cacheSelectorLOWBAT  = $('channel[state.id=*.LOWBAT|*.LOW_BAT]');
+// /.*(\.MOTION|\.PRESENCE_DETECTION_STATE)/
+
+var cacheSelectorLOWBAT  = $('*.LOWBAT|.LOW_BAT]');
+
+var loggen = true;  // = false, wenn kein Logging gewünscht
+
+function countLowbat() {
+   // Setzt die Zähler vor dem Durchlauf aller Elemente *.LOWBAT auf 0
+   var moeglicheLOWBAT = 0;
+   var textLOWBAT      = [];
+   cacheSelectorLOWBAT.each(function (id, i) {   // Schleife für jedes gefundenen Element *.LOWBAT
+      var status = getState(id).val;             // Zustand *.LOWBAT abfragen (jedes Element)
+      var obj    = getObject(id);
+      if (status) {
+         textLOWBAT.push(obj.common.name);       // Zu Array hinzufügen
+      }
+      if(loggen) log("Geräte Nr. " + i + ": " + getObject(id).common.name + ": " + status);
+      ++moeglicheLOWBAT;                         // Zählt die Anzahl der vorhandenen Geräte unabhängig vom Status
+   });
+
+   // Schleife ist durchlaufen. Im Log wird der aktuelle Status (Anzahl, davon LOWBAT zutreffend) ausgegeben
+   if(loggen) log("Text: " + textLOWBAT.join(', '));
+   if(loggen) log("Anzahl Geräte: " + moeglicheLOWBAT + " # davon LOWBAT erkannt: " +  textLOWBAT.length);
+
+   // die ermittelten Werte werden als javascript.0. Variable in ioBroker gespeichert (z.B. für die Verarbeitung in VIS)
+   setState(id_textLowbat, textLOWBAT.join(',<br>')); // Schreibt die Namen der Geräte mit LOWBAT Meldung
+   setState(id_realLowbat, textLOWBAT.length);        // Schreibt die Anzahl der LOWBAT-Meldungen
+   setState(id_possibleLowbat, moeglicheLOWBAT);      // Schreibt die Anzahl der vorhandene Geräte
+}
+
+cacheSelectorLOWBAT.on(function() {   // bei Zustandänderung *.LOWBAT in allen Gewerken
+   countLowbat();
+});
+
+// Einmal ausführen
+countLowbat();
+
+// oder!! soll entweder ausgelöst werden alle 60 Minuten
+//schedule("*/60 * * * *", function () {
+//   countLowbat();
+//});

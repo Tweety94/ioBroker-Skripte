@@ -1,0 +1,127 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+// Berechnung von gleitendem Durchschnitt, Minimum und Maximum über einen Zeitraum
+
+// Konstanten
+var dp = "hm-rpc.0.001858A996B997.1.ILLUMINATION";  // Datenpunkt für Helligkeit
+var tc = 1;     // Abtastrate in Minuten (jede Minute)
+var T = 30     // Zeitraum der Auswertung in Minuten (45min Zeitraum)
+const sObjectPath = "0_userdata.0.calculation.illumination.";
+
+// IDs aller benötigten Datenpunkte
+var xid   = sObjectPath + 'actual';
+var minid = sObjectPath + 'minimum';
+var maxid = sObjectPath + 'maximum';
+var avrid = sObjectPath + 'average';
+var listid = sObjectPath + 'list';
+var anzid = sObjectPath + 'period';
+
+var n = Math.round(T / tc); // Anzahl der Werte
+var list  = new Array(n);
+
+function createStates() {
+    // Create States
+    createState(xid, 0, {
+        read: true, 
+        write: true, 
+        desc: "Aktueller Helligkeitswert", 
+        type: "number", 
+        min: 0, 
+        def: 0
+    });
+    createState(minid, 0, {
+        read: true, 
+        write: true, 
+        desc: "Minimaler Helligkeitswert", 
+        type: "number", 
+        min: 0, 
+        def: 0
+    });
+    createState(maxid, 0, {
+        read: true, 
+        write: true, 
+        desc: "Maximaler Helligkeitswert", 
+        type: "number", 
+        min: 0, 
+        def: 0
+    });
+    createState(avrid, 0, {
+        read: true, 
+        write: true, 
+        desc: "Durchschnittlicher Helligkeitswert", 
+        type: "number", 
+        min: 0, 
+        def: 0
+    });
+    createState(listid, "", {
+        read: true, 
+        write: true, 
+        desc: "Werteliste", 
+        type: "string"
+    });
+    createState(anzid, 0, {
+        read: true, 
+        write: true, 
+        desc: "Dauer der Periode in Minuten", 
+        type: "number", 
+        min: 0, 
+        def: 0
+    });
+    log('All states were created...');
+}
+
+function calc() {
+  list.pop();
+  var x = getState(dp).val;
+  list.unshift(x);
+  setState(listid, list.toString());
+  var min = x;
+  var max = x;
+  var sum = 0.0;
+  for (var i = 0; i < n; i++) {
+    var s = parseFloat(list[i]);
+   if (s < min) min = s;
+   if (s > max) max = s;
+   sum = sum + s;
+  }
+  var actAv = getState(avrid).val;
+  var newAv = parseFloat((sum / n).toFixed(0));
+  setState(xid, x);
+  setState(minid, min);
+  setState(maxid, max);
+  if (actAv != newAv) setState(avrid, newAv);
+}
+
+// bei Skriptstart
+if(!existsState(anzid))  {
+    log('Defined states not found. Creating states...');
+    createStates(); // Datenpunkte erstmal anlegen
+}
+var iAnz = getState(anzid).val;
+if (iAnz != T) {
+    // T hat sich geändert. Werteliste zurücksetzen.
+    setState(anzid, T);
+    setState(listid, '');
+    log('Reset of illumination average. New value = ' + T + ', old value = ' + iAnz);
+}
+var slist = getState(listid).val;
+if (slist) {
+    list = slist.split(",");
+} else {
+    // 1. Script start: Liste und String-Datenpunkt füllen
+    var x = getState(dp).val;
+    log('Starting illumination calculation with n=' + n);
+    for (var i = 0; i < n; i++) list[i] = x;
+    log('List was created at >' + listid + '<. List=' + list);
+}
+
+setTimeout(function() { // 3s verzögert die Kalkulation erstmals ausführen
+    calc();
+}, 3*1000);
+
+schedule("*/1 * * * *", calc); // alle 1 min

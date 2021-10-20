@@ -1,0 +1,214 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false,
+  "enabled": false
+}
+-- do not edit previous lines - END --*/
+//
+// ShuttercontrolControl
+// (c) 2021 by TOW
+//
+// Homemetic:
+// tgl. 12:00 Uhr => alle wach, d.h. Auto-Modus eingeschaltet
+// tgl. 01:00 Uhr => alle schlafen, d.h. Auto-Modus unterbrochen
+//
+
+const pathJalousien = "0_userdata.0.Jalousien"; // Pfad zu Jalousien Objekten
+const pathSystem = "0_userdata.0.System";       // Pfad zu System Objekten
+const EventListDestination = pathSystem + ".SystemEventList";
+const fC = false; // Objekte neu erstellen?
+const logging = false;
+
+/*
+"shuttercontrol.0.info.downTimeSleep"
+"shuttercontrol.0.info.downTimeLiving"
+"shuttercontrol.0.info.downTimeChildren"
+"shuttercontrol.0.info.upTimeSleep"
+*/
+
+const idSCCLog = pathJalousien + ".log";
+const idNextEvent = EventListDestination + ".NextEventId";
+
+createState(idSCCLog, " ", fC, {
+    name: "EventList für ShuttercontrolControl",
+    type: "string",
+    role: "value"
+});
+
+createState(idNextEvent, " ", fC, {
+    name: "Next ID for system event",
+    type: "string",
+    role: "value"
+});
+
+
+createState(EventListDestination + "EventList", "", false, { read: true, write: true, name: "Event-Liste", type: "string", role: "text", def: "" });
+createState(EventListDestination + "NextEventId", 0, false, { read: true, write: true, name: "Nächste Event-Id", type: "number", def: 0 });
+
+
+
+
+
+var idAutoSleep = "shuttercontrol.0.control.autoSleep"; // Schlafbereich
+var idAutoLiving = "shuttercontrol.0.control.autoLiving"; // Wohnbereich
+var idAutoChildren = "shuttercontrol.0.control.autoChildren"; // Kinderbereich
+
+var IDs = [idAutoSleep, idAutoLiving, idAutoChildren];
+
+
+
+const maxLogCount = 50;
+
+function checkLengthOfSCCLogList(LogList) {
+  // Nur die letzten x Einträge im Script belassen
+  let logList = LogList.split('<br>');
+  let logCount = logList.length;
+  let newLogList = "";
+ 
+  for (var i = 0; i < logCount; i++) {
+    if ( i < (maxLogCount-1) ) {
+      newLogList = newLogList + "<br>" + logList[i];
+    } else {
+      break;
+    }
+  }
+  return newLogList;
+}
+
+function addSCCLogEntry(LogText, LogType) {
+  let LogList = checkLengthOfSCCLogList(getState(idSCCLog).val);
+  
+  // Neue Event-Id und Zeitpunkt ermitteln
+  let EventId = getState(EventListDestination + ".NextEventId").val;
+  let EventDateTime = formatDate(getDateObject((new Date().getTime())), "TT.MM.JJ hh:mm:ss");
+  
+  EventId = EventId + 1;
+  setState(EventListDestination + ".NextEventId", EventId);
+    
+  let FormatedEventId = ("00000" + EventId).slice(-5);
+  let EventLog = FormatedEventId + " - " + EventDateTime + " - " + LogType + " - " + LogText;
+  LogList = EventLog + LogList;
+    
+  setState(EventListDestination + ".EventList", LogList);
+}
+
+
+function checkForAction(obj) {
+    logSCCAction();
+    var jetzt = new Date().getTime();
+    var text = jetzt + ": " + obj.id + "(" + obj.state.val + ")";
+
+    addSCCLogEntry(text,"Info");
+}
+
+function logSCCAction() {
+
+
+}
+
+on({id: IDs, change: 'any'}, function(obj){
+    //Mach irgendwas
+    //console.log("SCC: Wert von '"  + obj.id + "' = " + obj.state.val + "*********");
+    checkForAction(obj);
+});
+
+
+
+/*
+
+******************
+const EventListDestination = "javascript.0.SystemEventList.";
+ 
+createState(EventListDestination + "EventList", "", false, { read: true, write: true, name: "Event-Liste", type: "string", role: "text", def: "" });
+createState(EventListDestination + "NextEventId", 0, false, { read: true, write: true, name: "Nächste Event-Id", type: "number", def: 0 });
+******************
+const EventListDestination = "javascript.0.SystemEventList.";
+ 
+function createEventlog(EventType, EventText) {
+  let EventList = getState(EventListDestination + "EventList").val;
+  let EventId = getState(EventListDestination + "NextEventId").val;
+  let EventDateTime = formatDate(getDateObject((new Date().getTime())), "TT.MM.JJ hh:mm:ss");
+ 
+  EventId = EventId + 1;
+  setState(EventListDestination + "NextEventId", EventId);
+   
+  let FormatedEventId = ("00000" + EventId).slice(-5);
+   
+  let EventLog = FormatedEventId + " - " + EventDateTime + " - " + EventType + " - " + EventText;
+  EventList = EventLog + "<br>" + EventList;
+   
+  setState(EventListDestination + "EventList", EventList);
+}
+*******************
+const EventListDestination = "javascript.0.SystemEventList.";
+const maxEventCount = 500;
+  
+function createEventlog(EventType, EventText) {
+  let EventList = getState(EventListDestination + "EventList").val;
+   
+  // Nur die letzten x Einträge im Script belassen
+  let eventList = EventList.split('<br>');
+  let eventCount = eventList.length;
+  let newEventList = "";
+ 
+  for (var i = 0; i < eventCount; i++) {
+    if ( i < (maxEventCount-1) ) {
+      newEventList = newEventList + "<br>" + eventList[i];
+    } else {
+      break;
+    }
+  }
+   
+  EventList = newEventList;
+  
+  // Neue Event-Id und Zeitpunkt ermitteln
+  let EventId = getState(EventListDestination + "NextEventId").val;
+  let EventDateTime = formatDate(getDateObject((new Date().getTime())), "TT.MM.JJ hh:mm:ss");
+  
+  EventId = EventId + 1;
+  setState(EventListDestination + "NextEventId", EventId);
+    
+  let FormatedEventId = ("00000" + EventId).slice(-5);
+  let EventLog = FormatedEventId + " - " + EventDateTime + " - " + EventType + " - " + EventText;
+  EventList = EventLog + EventList;
+    
+  setState(EventListDestination + "EventList", EventList);
+}
+******************
+var objectName = 'TestString.message';
+var TimeString = 'test 12:00';
+ 
+if ( !existsState(objectName )) {
+  createState(objectName,TimeString,{name: "TestString Message",  type: 'string', role: 'value'}, function () {}); 
+} else {
+  setState(objectName,TimeString);
+}
+*****************
+function formatTwoDigits(n) {
+return n < 10 ? '0' + n : n;
+}
+ 
+function GetCurrentTimeStamp() {
+var now = new Date();
+var dd = now.getDate();
+var mm = now.getMonth()+1;
+ 
+var yyyy = now.getFullYear();
+dd = formatTwoDigits(dd);
+mm = formatTwoDigits(mm);
+ 
+var hours = formatTwoDigits(now.getHours());
+var minutes = formatTwoDigits(now.getMinutes());
+var seconds = formatTwoDigits(now.getSeconds());
+ 
+var TimeStampString = dd+"."+mm+"."+yyyy+" "+hours + ":" + minutes + ":" + seconds;
+ 
+return TimeStampString;
+}
+*********************
+var idSchlafbereich = "hm-rega.0.20017"; // Schlafbereich
+var idWohnbereich = "hm-rega.0.20019"; // Wohnbereich
+var idKinderbereich = "hm-rega.0.20018"; // Kinderbereich
+*/

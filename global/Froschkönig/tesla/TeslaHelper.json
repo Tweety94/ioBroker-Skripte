@@ -1,0 +1,229 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+//
+// Datenstruktur Tesla
+// von Torsten Wieckberg
+//
+
+const g_sBasePathObjectData = "javascript.0.tesla";
+const g_sStructureArray = {
+    "requests" : [
+        {
+            name    : "Tesla Powerwall 2",
+            desc    : "Die aktuelle Werte der Anlage",
+            url     : "https://10.1.3.120/api/meters/aggregates",
+            nodepath : "actual",
+            rawdata : {
+                nodepath : "raw",
+                name     : "Anlagendaten (Rohdaten)",
+                desc     : "Die Rohdaten der Powerwall2",
+                nodename : "aggregates",
+                type     : "string"
+            },            
+            types    : [
+                {
+                    name : "Solaranlage",
+                    desc : "Werte der Solaranlage (Symbol oben)",
+                    nodename : "solar",
+                    destnode : "solar"
+                },
+                {
+                    name : "Stromnetz",
+                    desc : "Werte des Stromnetzes (Symbol links)",
+                    nodename : "site",
+                    destnode : "site"
+                },
+                {
+                    name : "Haus",
+                    desc : "Werte des Hauses (Symbol rechts)",
+                    nodename : "load",
+                    destnode : "load"
+                },
+                {
+                    name : "Powerwall",
+                    desc : "Werte des Hauses (Symbol unten)",
+                    nodename : "battery",
+                    destnode : "battery"
+                }],
+            variables : [
+                {
+                    name: "last_communication_time",
+                    desc: "Letzter Zeitpunkt der Kommunikation",
+                    nodename: "last_communication_time",
+                    destnode: "last_communication_time",
+                    type: "string"
+                },
+                {
+                    name: "instant_power",
+                    desc: "Aktuelle Leistung",
+                    nodename: "instant_power",
+                    destnode: "instant_power",
+                    type: "number"
+                },
+                {
+                    name: "instant_reactive_power",
+                    desc: "",
+                    nodename: "instant_reactive_power",
+                    destnode: "instant_reactive_power",
+                    type: "number"
+                },
+                {
+                    name: "instant_apparent_power",
+                    desc: "",
+                    nodename: "instant_apparent_power",
+                    destnode: "instant_apparent_power",
+                    type: "number"
+                },
+                {
+                    name: "frequency",
+                    desc: "Frequenz",
+                    nodename: "frequency",
+                    destnode: "frequency",
+                    type: "number"
+                },
+                {
+                    name: "energy_exported",
+                    desc: "",
+                    nodename: "energy_exported",
+                    destnode: "energy_exported",
+                    type: "number"
+                },
+                {
+                    name: "energy_imported",
+                    desc: "",
+                    nodename: "energy_imported",
+                    destnode: "energy_imported",
+                    type: "number"
+                },
+                {
+                    name: "instant_average_voltage",
+                    desc: "",
+                    nodename: "instant_average_voltage",
+                    destnode: "instant_average_voltage",
+                    type: "number"
+                },
+                {
+                    name: "instant_total_current",
+                    desc: "",
+                    nodename: "instant_total_current",
+                    destnode: "instant_total_current",
+                    type: "number"
+                },
+                {
+                    name: "i_a_current",
+                    desc: "",
+                    nodename: "i_a_current",
+                    destnode: "i_a_current",
+                    type: "number"
+                },
+                {
+                    name: "i_b_current",
+                    desc: "",
+                    nodename: "i_b_current",
+                    destnode: "i_b_current",
+                    type: "number"
+                },
+                {
+                    name: "i_c_current",
+                    desc: "",
+                    nodename: "i_c_current",
+                    destnode: "i_c_current",
+                    type: "number"
+                },
+                {
+                    name: "timeout",
+                    desc: "desc",
+                    nodename: "timeout",
+                    destnode: "timeout",
+                    type: "number"
+                }],
+        },
+        {
+            name    : "Ladezustand",
+            desc    : "Die aktuellen Ladezustand der Powerwall",
+            url     : "https://10.1.3.120/api/system_status/soe",
+            nodepath : "actual",
+            rawdata : {
+                nodepath : "raw",
+                name     : "Powerwall (Rohdaten)",
+                desc     : "Die Rohdaten der Powerwall2",
+                nodename : "powerwall",
+                type     : "string"
+            },
+            types : [
+                {
+                    name : "Powerwall 2",
+                    desc : "Die Powerwall 2",
+                    nodename : "powerwall",
+                    destnode : "powerwall"
+                }],
+            variables : [
+                {
+                    name: "Ladezustand",
+                    desc: "Ladezustand der Powerwall in %",
+                    nodename: "percentage",
+                    destnode: "percentage",
+                    type : "number"
+                }]
+        }
+    ],
+    "saveData" : {
+        nodePath : "store",
+        nodes : ["today", "yesterday", "2days_ago", "thisWeek", "lastWeek", "thisMonth", "lastMonth", "thisYear", "lastYear"],
+        data : [
+            {
+                name: "maxBatteryLevel",
+                desc: "höchster Batteriestand des Zeitraums",
+                destnode: "maxBatteryLevel",
+                type: "number"
+            },
+            {
+                name: "minBatteryLevel",
+                desc: "niedriegster Batteriestand des Zeitraums",
+                destnode: "minBatteryLevel",
+                type: "number"
+            }
+        ],
+        typeData : [
+            {
+                name: "energy_exported",
+                desc: "Produzierte Energie zu Beginn des Zeitraums (absolut)",
+                destnode: "raw.energy_exported_bp",
+                type: "number"
+            },
+            {
+                name: "energy_imported",
+                desc: "Verbrauchte Energie zu Beginn des Zeitraums (absolut)",
+                destnode: "raw.energy_imported_bp",
+                type: "number"
+            },
+            {
+                name: "energy_exported",
+                desc: "Produzierte Energie im Zeitraum",
+                destnode: "energy_exported",
+                type: "number"
+            },
+            {
+                name: "energy_imported",
+                desc: "Verbrauchte Energie im Zeitraum",
+                destnode: "energy_imported",
+                type: "number"
+            }
+        ]
+    }
+};
+
+// BasePath zurückgeben
+function getTeslaBasePathObjectData() {
+    return g_sBasePathObjectData;
+}
+
+// StructureArray zurückgeben
+function getTeslaStructureArray() {
+    return g_sStructureArray;
+}

@@ -1,0 +1,20 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+// Filter für Corona Statistik
+on({ id: '0_userdata.0.vis.Corona.filter', change: 'any' }, function (obj) {
+    if (obj.state.val === 'continents') {
+        setState('0_userdata.0.vis.Corona.visibleContinent', true, true);
+        setState('0_userdata.0.vis.Corona.visibleCountries', false, true);
+    } else if (obj.state.val === 'countries') {
+        setState('0_userdata.0.vis.Corona.visibleContinent', false, true);
+        setState('0_userdata.0.vis.Corona.visibleCountries', true, true);
+    } else {
+        setState('0_userdata.0.vis.Corona.visibleContinent', true, true);
+        setState('0_userdata.0.vis.Corona.visibleCountries', true, true);
+    }
+});
