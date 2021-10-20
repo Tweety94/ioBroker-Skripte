@@ -1,0 +1,118 @@
+/* -- do not edit following lines - START --
+{
+  "expert": true,
+  "debug": false,
+  "verbose": false
+}
+-- do not edit previous lines - END --*/
+var link = 'https://10.1.3.200/config/xmlapi/rssilist.cgi';
+var request = require('request');
+var parseString = require('xml2js').parseString;
+var logging = false;
+var fC = false;
+
+var basePath = "0_userdata.0.Logging.HMSignalStrength.";
+
+function ImportRSSI()
+{
+    request(link, function (error, response, body)
+    {
+        var xml, result;
+
+        parseString(body, function (err, result)
+        {
+            var WriteDeviceId = true;
+
+            for (var i = 0; i < result.rssiList.rssi.length; i++)
+            {
+                var Device = result.rssiList.rssi[i].$;
+
+                var DeviceId = Device.device;
+                var DeviceTx = Device.tx;
+                var DeviceRx = Device.rx;
+                var DeviceName = DeviceId;
+                var DeviceObject;
+
+                var DeviceDutyCycle;
+                var DeviceFirmwareVersion;
+                var DevicePath;
+
+                DevicePath = "hm-rpc.1." + DeviceId;
+                DeviceObject = (existsObject(DevicePath) ? getObject(DevicePath) : null);
+                if (DeviceObject == null) {
+                    DevicePath = "hm-rega.0." + DeviceId;
+                    DeviceObject = (existsObject(DevicePath) ? getObject(DevicePath) : null);
+                    if (DeviceObject != null) {
+                        // Vermutlich CCU gefunden
+                        DevicePath = "hm-rega.0." + DeviceId + ".0.DUTY_CYCLE";
+                        if (existsState(DevicePath)) {
+                            DeviceDutyCycle = getState(DevicePath);
+                        }
+                        DevicePath = "hm-rega.0." + DeviceId + ".0.FIRMWARE_VERSION";
+                        if (existsState(DevicePath)) {
+                            DeviceFirmwareVersion = getState(DevicePath);
+                        }
+                    }
+                }
+                if (DeviceObject != null)
+                {
+                    DeviceName = DeviceObject.common.name;
+                    DeviceName = DeviceName.replace(/ /g, '_');
+                }
+                if (logging) {
+                    var logText = i + "# " + DeviceId + " (" + DeviceName + ") => Tx=" + DeviceTx + "/ Rx=" + DeviceRx;
+                    if (DeviceDutyCycle != null) {
+                        logText = logText + " [DC=" + DeviceDutyCycle.val + "%";
+                    }
+                    if (DeviceFirmwareVersion != null) {
+                        logText = logText + "/FW=" + DeviceFirmwareVersion.val;
+                    }
+                    logText = logText + "]";
+                    log(logText);
+                }
+
+                var deviceName = basePath + DeviceId;
+
+                createState(deviceName, false, fC, {
+                        name: DeviceName,
+                        type: "object"
+                    });
+
+                createState(deviceName + '.tx', DeviceTx, fC, {
+                        name: "TX",
+                        type: "number",
+                        role: "value"
+                    });
+                createState(deviceName + '.rx', DeviceRx, fC, {
+                        name: "RX",
+                        type: "number",
+                        role: "value"
+                    });
+                if (DeviceDutyCycle != null) {
+                    //log("XXXX:DeviceDutyCycle=" + DeviceDutyCycle.val);
+                    createState(deviceName + '.DutyCycle', DeviceDutyCycle.val, fC, {
+                            name: "DutyCycle",
+                            type: "number",
+                            role: "value"
+                        });
+                }
+                if (DeviceFirmwareVersion != null) {
+                    //log("XXXX:DeviceFirmwareVersion=" + DeviceFirmwareVersion.val);
+                    createState(deviceName + '.FirmwareVersion', DeviceFirmwareVersion.val, fC, {
+                            name: "FirmwareVersion",
+                            type: "string",
+                            role: "value"
+                        });
+                }
+            }
+            log ('RSSI Check of ' + i + ' device(s).');
+        });
+
+    });
+}
+
+//ImportRSSI();
+
+schedule("* * * * *", function () {
+   ImportRSSI();
+});
