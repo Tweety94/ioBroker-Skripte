@@ -5,7 +5,7 @@
   "verbose": false
 }
 -- do not edit previous lines - END --*/
-var link = 'https://10.1.3.200/config/xmlapi/rssilist.cgi';
+var link = "https://10.1.3.200/config/xmlapi/rssilist.cgi";
 var request = require('request');
 var parseString = require('xml2js').parseString;
 var logging = false;
@@ -15,7 +15,7 @@ var basePath = "0_userdata.0.Logging.HMSignalStrength.";
 
 function ImportRSSI()
 {
-    request(link, function (error, response, body)
+    request({url:link, rejectUnauthorized: false}, function (error, response, body)
     {
         var xml, result;
 
