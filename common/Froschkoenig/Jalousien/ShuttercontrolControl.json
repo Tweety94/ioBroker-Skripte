@@ -7,66 +7,360 @@
 }
 -- do not edit previous lines - END --*/
 //
-// ShuttercontrolControl
-// (c) 2021 by TOW
+// ** ShuttercontrolControl **
+// (c) 2021-2024 by TOW
 //
-// Homemetic:
+// Homematic:
 // tgl. 12:00 Uhr => alle wach, d.h. Auto-Modus eingeschaltet
 // tgl. 01:00 Uhr => alle schlafen, d.h. Auto-Modus unterbrochen
 //
+const sVersion = "V1.2.9";
+const sScriptname = "ShutterControlControl";
+const sAuthors = "Tweety";
+const sCopyrightYear = "2024";
 
-const pathJalousien = "0_userdata.0.Jalousien"; // Pfad zu Jalousien Objekten
-const pathSystem = "0_userdata.0.System";       // Pfad zu System Objekten
-const EventListDestination = pathSystem + ".SystemEventList";
+const pathUserdata = "0_userdata.0";                // Pfad zu Userdata
+const pathJalousien = pathUserdata + ".Jalousien";  // Pfad zu Jalousien Objekten
+const pathSystem = pathUserdata + ".System";        // Pfad zu System Objekten
+
+const EventListJalousien = pathJalousien + ".EventList";
+const EventListSystem = pathSystem + ".SystemEventList";
 const fC = false; // Objekte neu erstellen?
 const logging = false;
 
+const infoArray = {
+  "commands" : {
+    dpAutoAll : "shuttercontrol.0.control.autoAll"
+  },
+  "areas" : [
+    {   // begin of Living
+      name        : "Living",
+      path        : "living",
+      switch      : "shuttercontrol.0.control.autoLiving",
+      dpDownTime  : "shuttercontrol.0.info.downTimeLiving",
+      dpUpTime    : "shuttercontrol.0.info.upTimeLiving",
+      dpButtonUp  : "shuttercontrol.0.control.openLiving",
+      dpButtonDown: "shuttercontrol.0.control.closeLiving",
+      shutter     : [
+        {
+          name        : "Küche Spüle",
+          desc        : "Datenpunkt Jalousien Küche Spüle",
+          actor       : "hm-rpc.0.001658A99FD376.6.LEVEL",
+          opened      : 40,
+          closed      : 0,
+          dpAutoState : "shuttercontrol.0.shutters.autoState.JA_EG-06_Kü_Spüle_(HmIPW-DRBL4-15_001658A99FD376:06)_LEVEL",
+          dpAutoLevel : "shuttercontrol.0.shutters.autoLevel.JA_EG-06_Kü_Spüle_(HmIPW-DRBL4-15_001658A99FD376:06)_LEVEL"
+        },
+        {
+          name        : "Küche Garten",
+          desc        : "Datenpunkt Jalousien Küche Garten",
+          actor       : "hm-rpc.0.001658A99FD376.10.LEVEL",
+          opened      : 100,
+          closed      : 0,
+          dpAutoState : "shuttercontrol.0.shutters.autoState.JA_EG-07_Kü_Garten_(HmIPW-DRBL4-15_001658A99FD376:10)_LEVEL",
+          dpAutoLevel : "shuttercontrol.0.shutters.autoLevel.JA_EG-07_Kü_Garten_(HmIPW-DRBL4-15_001658A99FD376:10)_LEVEL"
+        },
+        {
+          name        : "Wohnzimmer Giebel",
+          desc        : "Datenpunkt Jalousien Wohnzimmer Giebel",
+          actor       : "hm-rpc.0.001658A99FD376.14.LEVEL",
+          opened      : 100,
+          closed      : 0,
+          dpAutoState : "shuttercontrol.0.shutters.autoState.JA_EG-08_Wz_Giebel_(HmIPW-DRBL4-15_001658A99FD376:14)_LEVEL",
+          dpAutoLevel : "shuttercontrol.0.shutters.autoLevel.JA_EG-08_Wz_Giebel_(HmIPW-DRBL4-15_001658A99FD376:14)_LEVEL"
+        },
+        {
+          name        : "Wohnzimmer Südwest",
+          desc        : "Datenpunkt Jalousien Wohnzimmer Südwest",
+          actor       : "hm-rpc.0.001658A99FD353.2.LEVEL",
+          opened      : 100,
+          closed      : 0,
+          dpAutoState : "shuttercontrol.0.shutters.autoState.JA_EG-09_Wz_SW_(HmIPW-DRBL4-16_001658A99FD353:02)_LEVEL",
+          dpAutoLevel : "shuttercontrol.0.shutters.autoLevel.JA_EG-09_Wz_SW_(HmIPW-DRBL4-16_001658A99FD353:02)_LEVEL"
+        },
+        {
+          name        : "Wohnzimmer Garage",
+          desc        : "Datenpunkt Jalousien Wohnzimmer Garage",
+          actor       : "hm-rpc.0.001658A99FD353.6.LEVEL",
+          opened      : 100,
+          closed      : 0,
+          dpAutoState : "shuttercontrol.0.shutters.autoState.JA_EG-10_Wz_Garage_(HmIPW-DRBL4-16_001658A99FD353:06)_LEVEL",
+          dpAutoLevel : "shuttercontrol.0.shutters.autoLevel.JA_EG-10_Wz_Garage_(HmIPW-DRBL4-16_001658A99FD353:06)_LEVEL"
+        }
+
+      ],
+    },  // end of Living
+    {   // begin of Sleep
+      name        : "Sleep",
+      path        : "sleep",
+      switch      : "shuttercontrol.0.control.autoSleep",
+      dpDownTime  : "shuttercontrol.0.info.downTimeSleep",
+      dpUpTime    : "shuttercontrol.0.info.upTimeSleep",
+      dpButtonUp  : "shuttercontrol.0.control.openSleep",
+      dpButtonDown: "shuttercontrol.0.control.closeSleep",
+      shutter     : [
+        {
+          name        : "Bad",
+          desc        : "Datenpunkt Jalousien Badezimmer",
+          actor       : "hm-rpc.0.001658A99FD5DD.2.LEVEL",
+          opened      : 100,
+          closed      : 0,
+          dpAutoState : "shuttercontrol.0.shutters.autoState.JA_OG-03_Bad_(HmIPW-DRBL4_(001658A99FD5DD:02)_LEVEL",
+          dpAutoLevel : "shuttercontrol.0.shutters.autoLevel.JA_OG-03_Bad_(HmIPW-DRBL4_(001658A99FD5DD:02)_LEVEL"
+        },
+        {
+          name       : "Schlafzimmer",
+          desc        : "Datenpunkt Jalousien Schlafzimmer",
+          actor       : "hm-rpc.0.001658A99FD5DD.6.LEVEL",
+          opened      : 100,
+          closed      : 0,
+          dpAutoState : "shuttercontrol.0.shutters.autoState.JA_OG-04_Schlafzimmer_(HmIPW-DRBL4_001658A99FD5DD:06)_LEVEL",
+          dpAutoLevel : "shuttercontrol.0.shutters.autoLevel.JA_OG-04_Schlafzimmer_(HmIPW-DRBL4_001658A99FD5DD:06)_LEVEL"
+        },
+        {
+          name        : "Ankleide",
+          desc       : "Datenpunkt Jalousien Ankleide",
+          actor       : "hm-rpc.0.001658A99FD5DD.10.LEVEL",
+          opened      : 100,
+          closed      : 0,
+          dpAutoState : "shuttercontrol.0.shutters.autoState.JA_OG-05_Ankleide_(HmIPW-DRBL4_001658A99FD5DD:10)_LEVEL",
+          dpAutoLevel : "shuttercontrol.0.shutters.autoLevel.JA_OG-05_Ankleide_(HmIPW-DRBL4_001658A99FD5DD:10)_LEVEL"
+        },
+        {
+          name        : "Gast EG",
+          desc       : "Datenpunkt Jalousien Gästezimmer",
+          actor       : "hm-rpc.0.001658A99FD376.2.LEVEL",
+          opened      : 100,
+          closed      : 0,
+          dpAutoState : "shuttercontrol.0.shutters.autoState.JA_EG-05_Gast_(HmIPW-DRBL4-15_001658A99FD376:02)_LEVEL",
+          dpAutoLevel : "shuttercontrol.0.shutters.autoLevel.JA_EG-05_Gast_(HmIPW-DRBL4-15_001658A99FD376:02)_LEVEL"
+        }
+      ],
+    },  // end of Sleep
+    {   // begin of Children
+      name        : "Children",
+      path        : "children",
+      switch      : "shuttercontrol.0.control.autoChildren",
+      dpDownTime  : "shuttercontrol.0.info.downTimeChildren",
+      dpUpTime    : "shuttercontrol.0.info.upTimeChildren",
+      dpButtonUp  : "shuttercontrol.0.control.openChildren",
+      dpButtonDown: "shuttercontrol.0.control.closeChildren",
+      shutter     : [
+        {
+          name        : "Luca",
+          desc        : "Datenpunkt Jalousien Luca",
+          actor       : "hm-rpc.0.001658A99FD5DD.14.LEVEL",
+          opened      : 100,
+          closed      : 0,
+          dpAutoState : "shuttercontrol.0.shutters.autoState.JA_OG-06_Luca_(HmIPW-DRBL4_001658A99FD5DD:14)_LEVEL",
+          dpAutoLevel : "shuttercontrol.0.shutters.autoLevel.JA_OG-06_Luca_(HmIPW-DRBL4_001658A99FD5DD:14)_LEVEL"
+        },
+        {
+          name        : "Mathilda",
+          desc        : "Datenpunkt Jalousien Mathilda",
+          actor       : "hm-rpc.0.001658A99FD8BB.2.LEVEL",
+          opened      : 100,
+          closed      : 0,
+          dpAutoState : "shuttercontrol.0.shutters.autoState.JA_OG-07_Mathilda_(HmIPW-DRBL4_001658A99FD8BB:02)_LEVEL",
+          dpAutoLevel : "shuttercontrol.0.shutters.autoLevel.JA_OG-07_Mathilda_(HmIPW-DRBL4_001658A99FD8BB:02)_LEVEL"
+        }
+      ],
+    }  // end of Children
+  ] // of array
+} // of areas
+
+//******* Logeintrag mit Scriptnamen, Version und Developer (Copyright) */
+console.log(`Skript '${sScriptname}' / ${sVersion} / (C) ${sCopyrightYear} by ${sAuthors}`);
+
+let aObserverIDs = [];
+// var idAutoLiving = "shuttercontrol.0.control.autoLiving"; // Wohnbereich = idCCU_SV_NachtruheWohnbereich
+var idAutoLiving = infoArray.areas[0].switch;
+// var idAutoSleep = "shuttercontrol.0.control.autoSleep"; // Schlafbereich = idCCU_SV_NachtruheEltern
+var idAutoSleep = infoArray.areas[1].switch;
+// var idAutoChildren = "shuttercontrol.0.control.autoChildren"; // Kinderbereich = idCCU_SV_NachtruheKinder
+var idAutoChildren = infoArray.areas[2].switch;
+
 /*
-"shuttercontrol.0.info.downTimeSleep"
-"shuttercontrol.0.info.downTimeLiving"
-"shuttercontrol.0.info.downTimeChildren"
-"shuttercontrol.0.info.upTimeSleep"
-*/
-
-const idSCCLog = pathJalousien + ".log";
-const idNextEvent = EventListDestination + ".NextEventId";
-
-createState(idSCCLog, " ", fC, {
+createState(idSCCLogOLD, " ", fC, {
     name: "EventList für ShuttercontrolControl",
     type: "string",
     role: "value"
 });
 
-createState(idNextEvent, " ", fC, {
+createState(EventListJalousien + ".NextEventId", " ", fC, {
     name: "Next ID for system event",
     type: "string",
     role: "value"
 });
+*/
 
+createState(EventListJalousien + ".List", "", fC, {
+   read: true,
+   write: true,
+   name: "Event-Liste",
+   type: "string",
+   role: "text",
+   def: "" });
 
-createState(EventListDestination + "EventList", "", false, { read: true, write: true, name: "Event-Liste", type: "string", role: "text", def: "" });
-createState(EventListDestination + "NextEventId", 0, false, { read: true, write: true, name: "Nächste Event-Id", type: "number", def: 0 });
+createState(EventListJalousien + ".NextEventId", 0, fC, {
+   read: true,
+   write: true,
+   name: "Nächste Event-Id",
+   type: "number",
+   def: 0 });
 
+// Zuordnung Jalousien zu Bereich
+// shuttercontrol.0.shutters.autoState.JA_OG-03_Bad_(HmIPW-DRBL4_(001658A99FD5DD:02)_LEVEL
 
+var prevValueOfSwitch = [];
 
+var idInfoUptimeySleep = "shuttercontrol.0.info.upTimeSleep";
+var idInfoUptimeLiving = "shuttercontrol.0.info.upTimeLiving";
+var idInfoUptimeChildren = "shuttercontrol.0.info.upTimeChildren";
 
+var idCCU_SV_NachtruheEltern = "hm-rega.0.20017";
+var idCCU_SV_NachtruheWohnbereich = "hm-rega.0.20019";
+var idCCU_SV_NachtruheKinder = "hm-rega.0.20018";
 
-var idAutoSleep = "shuttercontrol.0.control.autoSleep"; // Schlafbereich
-var idAutoLiving = "shuttercontrol.0.control.autoLiving"; // Wohnbereich
-var idAutoChildren = "shuttercontrol.0.control.autoChildren"; // Kinderbereich
+// const ID2s = [idAutoLiving, idAutoSleep, idAutoChildren];
 
-var IDs = [idAutoSleep, idAutoLiving, idAutoChildren];
+const maxLogCount = 25;
 
+function initialize() {
+  // aObserverIDs setzen
+  const size = infoArray.areas.length;
+  for (var i = 0; i < size; i++) {
+    aObserverIDs[i] = infoArray.areas[i].switch;
+  }
+  //console.log("aObserverIDs:" +aObserverIDs);
+  // Initialize Switches (Test)
+  prevValueOfSwitch["shuttercontrol.0.control.autoLiving"] = getState("shuttercontrol.0.control.autoLiving").val;
+  prevValueOfSwitch["shuttercontrol.0.control.autoSleep"] = getState("shuttercontrol.0.control.autoSleep").val;
+  prevValueOfSwitch["shuttercontrol.0.control.autoChildren"] = getState("shuttercontrol.0.control.autoChildren").val;
 
+  // TEST TEST
+/*
+  var result2;
+  result2 = checkZeit("7:33", "8:33");
+  result2 = checkZeit("8:33", "8:33");
+  result2 = checkZeit("9:33", "8:33");
+  result2 = checkZeit("20:00", "8:33");
+  result2 = checkZeit("23:30", "8:33");
+  result2 = checkZeit("7:33:20", "8:33");
+  result2 = checkZeit("8:33:20", "8:33");
+  result2 = checkZeit("8:33:20", "8:33:20");
+  result2 = checkZeit("8:33", "8:33:20");
+*/
+}
 
-const maxLogCount = 50;
+function createTimeObject(time, addMins = 0) {
+  console.log("In createTimeObject(): time = '" + time + "' / addMins = '" + addMins + "')");
+  var resultDate = new Date(new Date().getTime());
+  resultDate.setHours(time.split(":")[0]);
+  resultDate.setMinutes(time.split(":")[1]);
+  if (time.split(":")[2]) {
+      resultDate.setSeconds(time.split(":")[2]);
+  }
+  else {
+    resultDate.setSeconds(0);
+  }
+  return new Date(resultDate.getTime() + (addMins * 60 * 1000));
+}
 
-function checkLengthOfSCCLogList(LogList) {
+function checkZeit(now, moveTime, direction, maxDelta = 0) {
+  var currentDate = new Date(); // Aktuelles Datum abholen
+  // Startdatum formatieren
+  var startDate = createTimeObject(now);
+  // Enddatum formatieren
+  var endDate = createTimeObject(moveTime);
+  var compare = "";
+  var returnValue = false;
+
+  switch (direction) {
+    case "up":
+      compare = (startDate >= endDate) ? ">=" : "<";
+      returnValue = (startDate >= endDate) ? true : false;
+    break;
+    case "down":
+      compare = (startDate <= endDate) ? "<=" : ">";
+      returnValue = (startDate <= endDate) ? true : false;
+    break;
+    default:
+      log("SCC ERROR checkZeit(): In Case DEFAULT mit direction ='" + direction + "'","error");
+  }
+  console.log("***(5): now inkl. maxDelta = '" + createTimeObject(now, maxDelta) + "' (now + maxDelta='" + (now + maxDelta) + "'");
+  console.log("***(4): maxDelta = '" + maxDelta + "'");
+  console.log("***(3): currentDate='" + currentDate + "' / startDate='" + startDate + "' / endDate='" + endDate + "'");
+  console.log("***(2): now='" + now + "' " + compare + " moveTime='" + moveTime + "' / (" + returnValue + ")");
+  console.log("***(1): Check if moving '" + direction + "': " + returnValue);
+  console.log("********************");
+
+  return returnValue;
+}
+
+/*
+function checkZeit(startTime, direction, upTime) {
+  const maxDelta = "";
+  let result = checkZeit(startTime, upTime, direction, maxDelta);
+  console.log("result = '" + result + "'");
+  return result;
+
+    // Aktuelles Datum abholen
+    var currentDate = new Date();
+
+    // Startdatum formatieren
+    var startDate = new Date(currentDate.getTime());
+    startDate.setHours(startTime.split(":")[0]);
+    startDate.setMinutes(startTime.split(":")[1]);
+    if (startTime.split(":")[2]) {
+        startDate.setSeconds(startTime.split(":")[2]);
+    }
+    else {
+      startDate.setSeconds(0);
+    }
+
+    // Enddatum formatieren
+    var endDate = new Date(currentDate.getTime());
+    endDate.setHours(upTime.split(":")[0]);
+    endDate.setMinutes(upTime.split(":")[1]);
+    if (upTime.split(":")[2]) {
+        endDate.setSeconds(upTime.split(":")[2]);
+    }
+    else {
+      endDate.setSeconds(0);
+    }
+
+    //Setze Zeitbereich zurück
+    var valid_time_frame = false;
+
+    */
+    /*
+    if (upTime > startTime) {
+        // upTime ist am gleichen Tag (also später)
+        valid_time_frame = (currentDate >= startDate && currentDate <= endDate) ? true : false;
+    } else {
+        // upTime ist am nächsten Tag (also bereits vorbei)
+        valid_time_frame = (currentDate >= endDate && currentDate <= startDate) ? false : true;
+    }
+    */
+    /*
+    valid_time_frame = (startDate >= endDate) ? true : false;
+
+    console.log("***(2): currentDate='" + currentDate + "' / startDate='" + startDate + "' / endDate='" + endDate + "'");
+    console.log("***(1): startTime='" + startTime + "' " + (startDate >= endDate) ? ">=" : "<" + " upTime='" + upTime + "' / (" + valid_time_frame + ")");
+    console.log("********************");
+    return valid_time_frame;
+
+}
+*/
+
+function checkLengthOfSCCLogList(EventListList) {
+  // console.log("SCC: Wert von EventListList (" + EventListJalousien + ".List" + ")='" + EventListList + "'");
   // Nur die letzten x Einträge im Script belassen
-  let logList = LogList.split('<br>');
-  let logCount = logList.length;
+  let logList = EventListList.split('<br>');
+  let logCount = EventListList.length;
   let newLogList = "";
- 
+
   for (var i = 0; i < logCount; i++) {
     if ( i < (maxLogCount-1) ) {
       newLogList = newLogList + "<br>" + logList[i];
@@ -77,138 +371,231 @@ function checkLengthOfSCCLogList(LogList) {
   return newLogList;
 }
 
-function addSCCLogEntry(LogText, LogType) {
-  let LogList = checkLengthOfSCCLogList(getState(idSCCLog).val);
-  
+function addSCCLogEntry(EventList, LogText, LogType) {
+  const idEventListLog = EventList + ".List";
+  const idNextEvent = EventList + ".NextEventId";
+  let LogList = checkLengthOfSCCLogList(getState(idEventListLog).val);
+
   // Neue Event-Id und Zeitpunkt ermitteln
-  let EventId = getState(EventListDestination + ".NextEventId").val;
-  let EventDateTime = formatDate(getDateObject((new Date().getTime())), "TT.MM.JJ hh:mm:ss");
-  
+  let EventId = getState(idNextEvent).val;
+  let EventDateTime = formatDate(getDateObject((new Date().getTime())), "TT.MM.JJJJ hh:mm:ss");
+
   EventId = EventId + 1;
-  setState(EventListDestination + ".NextEventId", EventId);
-    
+  setState(idNextEvent, EventId);
+
   let FormatedEventId = ("00000" + EventId).slice(-5);
   let EventLog = FormatedEventId + " - " + EventDateTime + " - " + LogType + " - " + LogText;
   LogList = EventLog + LogList;
-    
-  setState(EventListDestination + ".EventList", LogList);
+
+  setState(idEventListLog, LogList);
 }
 
-
-function checkForAction(obj) {
-    logSCCAction();
-    var jetzt = new Date().getTime();
-    var text = jetzt + ": " + obj.id + "(" + obj.state.val + ")";
-
-    addSCCLogEntry(text,"Info");
+function doPressButtonArea(area) {
+  console.log("SCC (doPressButtonArea()): für area.name='" + area.name + "'. ICH DRÜCKE NUN DEN BUTTON '" + area.dpButtonUp + "'!!");
+  setState(area.dpButtonUp, true);
 }
 
-function logSCCAction() {
-
-
+function doMoveShutterToPos(actor, name, value) {
+  let curValOfActor = getState(actor).val;
+  if (curValOfActor != value) {
+    console.log("SCC (doMoveShutterToPos()): Fahre actor='" + actor + "' (" + name + ") von Pos='" + curValOfActor + "' nach Pos='" + value + "'!!");
+    addSCCLogEntry(EventListJalousien, "Fahre actor='" + actor + "'(" + name + ") von Position='" + curValOfActor + "' nach Positon='" + value + "'!!", "Info");
+    setState(actor, value);
+  }
+  else {
+    console.log("SCC (doMoveShutterToPos()): Actor '" + actor + "' (" + name + ") wird NICHT gefahren (" + curValOfActor + "=" + value + ")!!");
+  }
 }
 
-on({id: IDs, change: 'any'}, function(obj){
-    //Mach irgendwas
-    //console.log("SCC: Wert von '"  + obj.id + "' = " + obj.state.val + "*********");
-    checkForAction(obj);
-});
+// function checkShutterArea(area, jetzt, direction)
+// area: JSON Objekt der entsprechende area ()
+// jetzt: Aktueller Zeitstempel
+// direction: Richtung ('up' oder 'down')
+function checkShutterArea(area, jetzt, direction) {
+  console.log("SCC (checkShutterArea()): für name='" + area.name + "' und Richtung='" + direction + "'");
 
+  var moveTime = "";
+  var dpButton = "";
+  var maxDelta = 0;
 
+  switch (direction) {
+    case "up":
+      moveTime = getState(area.dpUpTime).val;
+      dpButton = area.dpButtonUp;
+      maxDelta = 7;
+    break;
+    case "down":
+      moveTime = getState(area.dpDownTime).val;
+      dpButton = area.dpButtonDown;
+      maxDelta = 5;
+    break;
+    default:
+      log("SCC ERROR checkZeit(): In Case DEFAULT mit direction ='" + direction + "'","error");
+  }
+  var inTimeWindow = checkZeit(jetzt, moveTime, direction, maxDelta);
+
+  // Wenn eine der dazugehörigen Jalousien auf "none" steht, dann NUR DIESE fahren.
+  // geändert am 02.06.2024: Nur die Jalousien fahren, die NICHT auf "Manu-Mode", "up"
+  // und "sunProtect" stehen.
+  // Danach den AUTO-Mode betätigen, falls mindestens eine Jalousie gefahren wurde.
+
+  let iterCount = area.shutter.length;
+  //let doIt = false;
+  for (var i = 0; i < iterCount; i++) {
+    let autoState = getState(area.shutter[i].dpAutoState).val;
+    let autoLevel = getState(area.shutter[i].dpAutoLevel).val;
+    let name = area.shutter[i].name;
+    let actor = area.shutter[i].actor;
+    let opened = area.shutter[i].opened;
+    let closed = area.shutter[i].closed;
+    var doAutoAll = 0;
+    // UP:   Jalousien in "Manu_Mode", "up" und "sunProtect" nicht fahren
+    // DOWN: Jalousien in "Manu_Mode" und "down" nicht fahren
+    var doIt = false;
+    var level = "";
+
+    switch (direction) {
+      case "up":
+        doIt = (autoState != "Manu_Mode") && (autoState != "sunProtect") && (autoState != "up");
+        level = area.shutter[i].opened;
+      break;
+      case "down":
+        doIt = (autoState != "Manu_Mode") && (autoState != "down");
+        level = area.shutter[i].closed;
+      break;
+      default:
+        log("SCC ERROR checkShutterArea(): In Case DEFAULT mit direction ='" + direction + "'","error");
+    }
+
+    if ( doIt ) {
+      if (inTimeWindow) {
+        console.log("SCC (checkShutterArea()): JA, inTimeWindow! Fahre Jalousie '" + name + "' mit autoState='" + autoState + "' und autoLevel='" + autoLevel + "' in Position '" + level + "' (Actor:'" + actor + "') [i=" + i + "].");
+        doAutoAll = doAutoAll + 1;
+        doMoveShutterToPos(actor, name, level);
+      }
+      else {
+        console.log("SCC (checkShutterArea()): NEIN, fahre Jalousie '" + name + "' NICHT => not inTimeWindow (autoState='" + autoState + "' / autoLevel='" + autoLevel + "' / Ziel-Position '" + level + "' / actor:'" + actor + "') [i=" + i + "].");
+      }
+    }
+    else {
+      console.log("SCC (checkShutterArea()): NEIN, fahre Jalousie '" + name + "' NICHT: (autoState='" + autoState + "' / autoLevel='" + autoLevel + "' / actor:'" + actor + "') [i=" + i + "].");
+    }
+  }
+
+  // Am Schluss Auto-Mode setzen, um den Sonnenschutz zu ermöglichen
+  if (doAutoAll > 0) {
+    var dpAutoAll = infoArray.commands.dpAutoAll;
+    console.log("SCC (checkShutterArea()): Aktiviere Auto-Mode für alle (doAutoAll = " + doAutoAll + ")!");
+    setState(dpAutoAll, true);
+  }
+}
+
+// await sleep(100);
+
+function checkForAction(obj, direction) {
+
+  var status = obj.state.val;
+  var id = obj.id;
+  var jetzt = formatDate(new Date().getTime(), "hh:mm");
+  var text = jetzt + " Uhr";
+
+  console.log("SCC checkForAction() START: Value of = '" + id + "' = " + status + " (direction=" + direction + ") *********");
+
+  // Wenn der Status des Auslöser "true" ist, dann ist jemand aufgewacht.
+  // Wenn der Status des Auslöser "false" ist, dann geht jemand ins Bett.
+  switch (id) {
+    case idAutoLiving:
+      console.log("SCC: In Case mit id ='" + id + "'");
+      checkShutterArea(infoArray.areas[0], jetzt, direction);
+    break;
+    case idAutoSleep:
+      console.log("SCC: In Case mit id ='" + id + "'");
+      checkShutterArea(infoArray.areas[1], jetzt, direction);
+    break;
+    case idAutoChildren:
+      console.log("SCC: In Case mit id ='" + id + "'");
+      checkShutterArea(infoArray.areas[2], jetzt, direction);
+    break;
+    default:
+      log("SCC ERROR: In Case DEFAULT mit id ='" + id + "'","error");
+  }
+  console.log("SCC: Wert von Nachtruhe '" + id + "' = '" + status + "' (direction='" + direction + "')*********");
+  text = text + ": " + id + "=" + status;
+  addSCCLogEntry(EventListJalousien, text, "Info");
 
 /*
 
-******************
-const EventListDestination = "javascript.0.SystemEventList.";
- 
-createState(EventListDestination + "EventList", "", false, { read: true, write: true, name: "Event-Liste", type: "string", role: "text", def: "" });
-createState(EventListDestination + "NextEventId", 0, false, { read: true, write: true, name: "Nächste Event-Id", type: "number", def: 0 });
-******************
-const EventListDestination = "javascript.0.SystemEventList.";
- 
-function createEventlog(EventType, EventText) {
-  let EventList = getState(EventListDestination + "EventList").val;
-  let EventId = getState(EventListDestination + "NextEventId").val;
-  let EventDateTime = formatDate(getDateObject((new Date().getTime())), "TT.MM.JJ hh:mm:ss");
- 
-  EventId = EventId + 1;
-  setState(EventListDestination + "NextEventId", EventId);
-   
-  let FormatedEventId = ("00000" + EventId).slice(-5);
-   
-  let EventLog = FormatedEventId + " - " + EventDateTime + " - " + EventType + " - " + EventText;
-  EventList = EventLog + "<br>" + EventList;
-   
-  setState(EventListDestination + "EventList", EventList);
-}
-*******************
-const EventListDestination = "javascript.0.SystemEventList.";
-const maxEventCount = 500;
-  
-function createEventlog(EventType, EventText) {
-  let EventList = getState(EventListDestination + "EventList").val;
-   
-  // Nur die letzten x Einträge im Script belassen
-  let eventList = EventList.split('<br>');
-  let eventCount = eventList.length;
-  let newEventList = "";
- 
-  for (var i = 0; i < eventCount; i++) {
-    if ( i < (maxEventCount-1) ) {
-      newEventList = newEventList + "<br>" + eventList[i];
-    } else {
+  // Wenn der Status des Auslöser "true" ist, dann weiter prüfen.
+  // "true" bedeutet, dass jemand aufgewacht ist.
+  if (status == true) {
+    switch (id) {
+      case idAutoLiving:
+        console.log("SCC: In Case mit id ='" + id + "'");
+        checkShutterArea(infoArray.areas[0], jetzt, direction);
       break;
+      case idAutoSleep:
+        console.log("SCC: In Case mit id ='" + id + "'");
+        checkShutterArea(infoArray.areas[1], jetzt, direction);
+      break;
+      case idAutoChildren:
+        console.log("SCC: In Case mit id ='" + id + "'");
+        checkShutterArea(infoArray.areas[2], jetzt, direction);
+      break;
+      default:
+        log("SCC ERROR: In Case DEFAULT mit id ='" + id + "'","error");
     }
+    console.log("SCC: Wert von Nachtruhe '" + id + "' = " + status + "********* (checkForAction():true)");
+    text = text + ": " + id + "=" + status;
+    addSCCLogEntry(EventListJalousien, text, "Info");
   }
-   
-  EventList = newEventList;
-  
-  // Neue Event-Id und Zeitpunkt ermitteln
-  let EventId = getState(EventListDestination + "NextEventId").val;
-  let EventDateTime = formatDate(getDateObject((new Date().getTime())), "TT.MM.JJ hh:mm:ss");
-  
-  EventId = EventId + 1;
-  setState(EventListDestination + "NextEventId", EventId);
-    
-  let FormatedEventId = ("00000" + EventId).slice(-5);
-  let EventLog = FormatedEventId + " - " + EventDateTime + " - " + EventType + " - " + EventText;
-  EventList = EventLog + EventList;
-    
-  setState(EventListDestination + "EventList", EventList);
-}
-******************
-var objectName = 'TestString.message';
-var TimeString = 'test 12:00';
- 
-if ( !existsState(objectName )) {
-  createState(objectName,TimeString,{name: "TestString Message",  type: 'string', role: 'value'}, function () {}); 
-} else {
-  setState(objectName,TimeString);
-}
-*****************
-function formatTwoDigits(n) {
-return n < 10 ? '0' + n : n;
-}
- 
-function GetCurrentTimeStamp() {
-var now = new Date();
-var dd = now.getDate();
-var mm = now.getMonth()+1;
- 
-var yyyy = now.getFullYear();
-dd = formatTwoDigits(dd);
-mm = formatTwoDigits(mm);
- 
-var hours = formatTwoDigits(now.getHours());
-var minutes = formatTwoDigits(now.getMinutes());
-var seconds = formatTwoDigits(now.getSeconds());
- 
-var TimeStampString = dd+"."+mm+"."+yyyy+" "+hours + ":" + minutes + ":" + seconds;
- 
-return TimeStampString;
-}
-*********************
-var idSchlafbereich = "hm-rega.0.20017"; // Schlafbereich
-var idWohnbereich = "hm-rega.0.20019"; // Wohnbereich
-var idKinderbereich = "hm-rega.0.20018"; // Kinderbereich
+  else {
+    // Schalter wurde deaktiviert (auf "false" gesetzt, d.h. jemand geht ins Bett)
+    console.log("SCC: Wert von Nachtruhe '" + id + "' = " + status + "********* (checkForAction():false)");
+    text = text + ": " + id + "=" + status;
+    addSCCLogEntry(EventListJalousien, text, "Info");
+  }
 */
+
+  console.log("SCC checkForAction() END: Value of = '" + id + "' = " + status + " (direction=" + direction + ") *********");
+}
+
+function checkForPrevValue(triggerObj) {
+  let triggerID = triggerObj.id;
+  let triggerVal = triggerObj.state.val;
+  let prevTriggerVal = prevValueOfSwitch[triggerID];
+
+  if (triggerVal == prevTriggerVal) {
+    console.log("********** START SCC (B) ********** (" + triggerID + " NOT CHANGED) [triggerObj=" + JSON.stringify(triggerObj) + "]");
+    console.log("SCC: Auslöser '"  + triggerID + "' mit Wert '" + triggerVal + "' (unverändert).");
+    return "none";
+  }
+  else {
+    var curStateValSleep = getState("shuttercontrol.0.control.autoSleep").val;
+    var curStateValLiving = getState("shuttercontrol.0.control.autoLiving").val;
+    var curStateValChildren = getState("shuttercontrol.0.control.autoChildren").val;
+    // Wenn triggerVal == true dann war er vorher false (true = wach = up).
+    var returnValue = (triggerVal ? "up" : "down");
+    console.log("********** START SCC (A) **********");
+    console.log("SCC: Auslöser '"  + triggerID + "' mit Wert '" + triggerVal + "' (war vorher '" + prevTriggerVal + "') => '" + returnValue + "' ***********");
+    console.log("prevValueOfSwitch: Sleep='" + prevValueOfSwitch["shuttercontrol.0.control.autoSleep"] + "'/ Living='" + prevValueOfSwitch["shuttercontrol.0.control.autoLiving"] + "'/ Children='" + prevValueOfSwitch["shuttercontrol.0.control.autoChildren"] + "'");
+    console.log("curValueOfSwitch: Sleep='" + curStateValSleep + "'/ Living='" + curStateValLiving + "'/ Children='" + curStateValChildren + "'");
+    prevValueOfSwitch[triggerID] = triggerVal;
+    return returnValue;
+  }
+}
+
+function logSCCAction(id, status, uptime, button) {
+
+    return "Uptime = " + uptime + " Uhr (" + id + ")";
+
+}
+
+// INIT
+initialize();
+
+on({id: aObserverIDs, change: 'any'}, function(obj){
+    //Löst aus, wenn einer der drei Schalter sich ändert.
+    var direction = checkForPrevValue(obj);
+    if (direction != "none") checkForAction(obj, direction);
+    //if (checkForPrevValue(obj)) checkForAction(obj, "up");
+});
