@@ -14,10 +14,10 @@
 // tgl. 12:00 Uhr => alle wach, d.h. Auto-Modus eingeschaltet
 // tgl. 01:00 Uhr => alle schlafen, d.h. Auto-Modus unterbrochen
 //
-const sVersion = "V1.2.9";
+const sVersion = "V1.2.10";
 const sScriptname = "ShutterControlControl";
 const sAuthors = "Tweety";
-const sCopyrightYear = "2024";
+const sCopyrightYear = "2024-2026";
 
 const pathUserdata = "0_userdata.0";                // Pfad zu Userdata
 const pathJalousien = pathUserdata + ".Jalousien";  // Pfad zu Jalousien Objekten
@@ -288,7 +288,7 @@ function checkZeit(now, moveTime, direction, maxDelta = 0) {
     default:
       log("SCC ERROR checkZeit(): In Case DEFAULT mit direction ='" + direction + "'","error");
   }
-  console.log("***(5): now inkl. maxDelta = '" + createTimeObject(now, maxDelta) + "' (now + maxDelta='" + (now + maxDelta) + "'");
+  console.log("***(5): now inkl. maxDelta = '" + createTimeObject(now, maxDelta) + "' (now + maxDelta='" + now + " + " + maxDelta + "'");
   console.log("***(4): maxDelta = '" + maxDelta + "'");
   console.log("***(3): currentDate='" + currentDate + "' / startDate='" + startDate + "' / endDate='" + endDate + "'");
   console.log("***(2): now='" + now + "' " + compare + " moveTime='" + moveTime + "' / (" + returnValue + ")");
@@ -392,15 +392,17 @@ function addSCCLogEntry(EventList, LogText, LogType) {
 
 function doPressButtonArea(area) {
   console.log("SCC (doPressButtonArea()): für area.name='" + area.name + "'. ICH DRÜCKE NUN DEN BUTTON '" + area.dpButtonUp + "'!!");
-  setState(area.dpButtonUp, true);
+  //setState(area.dpButtonUp, true);
+  setStateDelayed(area.dpButtonUp, true, 1000, true);
 }
 
-function doMoveShutterToPos(actor, name, value) {
+function doMoveShutterToPos(actor, name, value, delay) {
   let curValOfActor = getState(actor).val;
   if (curValOfActor != value) {
-    console.log("SCC (doMoveShutterToPos()): Fahre actor='" + actor + "' (" + name + ") von Pos='" + curValOfActor + "' nach Pos='" + value + "'!!");
-    addSCCLogEntry(EventListJalousien, "Fahre actor='" + actor + "'(" + name + ") von Position='" + curValOfActor + "' nach Positon='" + value + "'!!", "Info");
-    setState(actor, value);
+    console.log("SCC (doMoveShutterToPos()): Fahre actor='" + actor + "' (" + name + ") von Pos='" + curValOfActor + "' nach Pos='" + value + "' (delay=" + delay + ")!!");
+    addSCCLogEntry(EventListJalousien, "Fahre actor='" + actor + "'(" + name + ") von Position='" + curValOfActor + "' nach Positon='" + value + "' (delay=" + delay + ")!!", "Info");
+    //setState(actor, value);
+    setStateDelayed(actor, value, delay, true);
   }
   else {
     console.log("SCC (doMoveShutterToPos()): Actor '" + actor + "' (" + name + ") wird NICHT gefahren (" + curValOfActor + "=" + value + ")!!");
@@ -471,7 +473,7 @@ function checkShutterArea(area, jetzt, direction) {
       if (inTimeWindow) {
         console.log("SCC (checkShutterArea()): JA, inTimeWindow! Fahre Jalousie '" + name + "' mit autoState='" + autoState + "' und autoLevel='" + autoLevel + "' in Position '" + level + "' (Actor:'" + actor + "') [i=" + i + "].");
         doAutoAll = doAutoAll + 1;
-        doMoveShutterToPos(actor, name, level);
+        doMoveShutterToPos(actor, name, level, 1000 * i);
       }
       else {
         console.log("SCC (checkShutterArea()): NEIN, fahre Jalousie '" + name + "' NICHT => not inTimeWindow (autoState='" + autoState + "' / autoLevel='" + autoLevel + "' / Ziel-Position '" + level + "' / actor:'" + actor + "') [i=" + i + "].");
