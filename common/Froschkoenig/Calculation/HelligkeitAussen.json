@@ -1,3 +1,4 @@
+
 /* -- do not edit following lines - START --
 {
   "expert": true,
@@ -5,118 +6,501 @@
   "verbose": false
 }
 -- do not edit previous lines - END --*/
+//
+// Skript zur Berechnung der aktuellen Helligkeit.
 // Berechnung von gleitendem Durchschnitt, Minimum und Maximum über einen Zeitraum
+//
 
-// Konstanten
-var dp = "hm-rpc.0.001858A996B997.1.ILLUMINATION";  // Datenpunkt für Helligkeit
-var tc = 1;     // Abtastrate in Minuten (jede Minute)
-var T = 30     // Zeitraum der Auswertung in Minuten (45min Zeitraum)
+// Definition der Konstanten
+const sVersion = "V0.6.3";
+const sScriptname = "HelligkeitAußen";
+const sAuthors = "Tweety";
+const sCopyrightYear = "2024";
+
 const sObjectPath = "0_userdata.0.calculation.illumination.";
 
+// Datenpunkte für Helligkeit, Überlauf, Erreichbarkeit, Temperatur
+// WS = Wetterstation
+var dp_WS_unreach =             "hm-rpc.0.00185F298DB65E.0.UNREACH";
+var dp_WS_illumination =        "hm-rpc.0.00185F298DB65E.1.ILLUMINATION";
+var dp_WS_illumination_status = "hm-rpc.0.00185F298DB65E.1.ILLUMINATION_STATUS";
+var dp_WS_temperature =         "hm-rpc.0.00185F298DB65E.1.ACTUAL_TEMPERATURE";
+// LS = Lichtsensor
+var dp_LS_unreach =             "hm-rpc.0.000D5F29ADD22E.0.UNREACH";
+var dp_LS_illumination =        "hm-rpc.0.000D5F29ADD22E.1.CURRENT_ILLUMINATION";
+var dp_LS_illumination_status = "hm-rpc.0.000D5F29ADD22E.1.CURRENT_ILLUMINATION_STATUS";
+// BM = Bewegungsmelder
+var dp_BM_unreach =             "hm-rpc.0.0031DF29A459A5.0.UNREACH";
+var dp_BM_illumination =        "hm-rpc.0.0031DF29A459A5.1.ILLUMINATION";
+var dp_BM_illumination_status = "hm-rpc.0.0031DF29A459A5.1.ILLUMINATION_STATUS";
+// CCU SV Sonnenschutz Korrektur
+var dp_sunProtectValue =        "hm-rega.0.77569";
+// Elevation
+var dp_Elevation =              "shuttercontrol.0.info.Elevation";
+// Solar power
+var dp_Tesla_solar_Power =      "tesla-motors.0.STE20190911-00081.live_status.solar_power";
+
+// Datenpunkt für Homematic Status
+var dp_hm1 = "hm-rega.0.46989"; // CCU SV Batterie Ladestand
+var dp_hm2 = "hm-rega.0.27735"; // CCU SV Lüftung Filterwechsel
+var dp_hm3 = "hm-rega.0.27736"; // CCU SV Lüftung Filterwechsel Tage
+var dp_hm4 = "hm-rega.0.18899"; // CCU SV Solar Heating
+var dp_hm5 = "hm-rega.0.62887"; // CCU SV Helligkeit kalkuliert
+var dp_hm6 = "hm-rega.0.77569"; // CCU SV Sonnenschutz Korrektur
+var dp_hm7 = "hm-rega.0.66489"; // CCU SV JA Sonnenschutz TV
+var dp_hm8 = "hm-rega.0.66490"; // CCU SV JA Sonnenschutz unterbrechen
+
+var tc = 1;     // Abtastrate in Minuten (jede Minute)
+var T = 30     // Zeitraum der Auswertung in Minuten (30min Zeitraum)
+
 // IDs aller benötigten Datenpunkte
-var xid   = sObjectPath + 'actual';
-var minid = sObjectPath + 'minimum';
-var maxid = sObjectPath + 'maximum';
-var avrid = sObjectPath + 'average';
-var listid = sObjectPath + 'list';
-var anzid = sObjectPath + 'period';
+var actid = sObjectPath + "actual";     // dp["actual"]
+var minid = sObjectPath + "minimum";
+var maxid = sObjectPath + "maximum";
+var avrid = sObjectPath + "average";
+var sunProtectValueID = sObjectPath + "sunProtectValue";
+var sunStatusid = sObjectPath + "sunStatus";
+var sunStatusValueid = sObjectPath + "sunStatusValue";
+var sunMagicNumberid = sObjectPath + "sunMagicNumber";
+var listid = sObjectPath + "list";
+var anzid = sObjectPath + "period";
+var rawWSid = sObjectPath + "raw.illumination_WS";
+var rawLSid = sObjectPath + "raw.illumination_LS";
+var rawBMid = sObjectPath + "raw.illumination_BM";
+var rawWSNormid = sObjectPath + "raw.illumination_WS_norm";
+var rawLSNormid = sObjectPath + "raw.illumination_LS_norm";
+var rawElevationid = sObjectPath + "raw.elevation";
+var rawTeslaSolarPowerid = sObjectPath + "raw.tesalSolarPower";
+
+//var datapoints = [actid, minid, maxid, avrid, listid, anzid, act2id];
+//var dp = setDefinitions();
 
 var n = Math.round(T / tc); // Anzahl der Werte
 var list  = new Array(n);
 
+//******* Logeintrag mit Scriptnamen, Version und Developer (Copyright) */
+console.log(`Skript '${sScriptname}' / ${sVersion} / (C)${sCopyrightYear} by ${sAuthors}`);
+
 function createStates() {
     // Create States
-    createState(xid, 0, {
-        read: true, 
-        write: true, 
-        desc: "Aktueller Helligkeitswert", 
-        type: "number", 
-        min: 0, 
-        def: 0
-    });
-    createState(minid, 0, {
-        read: true, 
-        write: true, 
-        desc: "Minimaler Helligkeitswert", 
-        type: "number", 
-        min: 0, 
-        def: 0
-    });
-    createState(maxid, 0, {
-        read: true, 
-        write: true, 
-        desc: "Maximaler Helligkeitswert", 
-        type: "number", 
-        min: 0, 
-        def: 0
-    });
-    createState(avrid, 0, {
-        read: true, 
-        write: true, 
-        desc: "Durchschnittlicher Helligkeitswert", 
-        type: "number", 
-        min: 0, 
-        def: 0
-    });
-    createState(listid, "", {
-        read: true, 
-        write: true, 
-        desc: "Werteliste", 
-        type: "string"
-    });
-    createState(anzid, 0, {
-        read: true, 
-        write: true, 
-        desc: "Dauer der Periode in Minuten", 
-        type: "number", 
-        min: 0, 
-        def: 0
-    });
-    log('All states were created...');
+    var minimumOneCreated = false;
+    if(!existsState(actid))  {
+        log("Defined state '" + actid + "' not found. Creating it...");
+        createState(actid, 0, {
+            read: true,
+            write: true,
+            desc: "Aktueller Helligkeitswert",
+            type: "number",
+            min: 0,
+            def: 0
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(sunProtectValueID))  {
+        log("Defined state '" + sunProtectValueID + "' not found. Creating it...");
+        createState(sunProtectValueID, 0, {
+            read: true,
+            write: true,
+            desc: "Aktueller Wert für den Sonnenschutz",
+            type: "number",
+            min: 0,
+            def: 0
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(minid))  {
+        log("Defined state '" + minid + "' not found. Creating it...");
+        createState(minid, 0, {
+            read: true,
+            write: true,
+            desc: "Minimaler Helligkeitswert",
+            type: "number",
+            min: 0,
+            def: 0
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(maxid))  {
+        log("Defined state '" + maxid + "' not found. Creating it...");
+        createState(maxid, 0, {
+            read: true,
+            write: true,
+            desc: "Maximaler Helligkeitswert",
+            type: "number",
+            min: 0,
+            def: 0
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(avrid))  {
+        log("Defined state '" + avrid + "' not found. Creating it...");
+        createState(avrid, 0, {
+            read: true,
+            write: true,
+            desc: "Durchschnittlicher Helligkeitswert",
+            type: "number",
+            min: 0,
+            def: 0
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(sunStatusid))  {
+        log("Defined state '" + sunStatusid + "' not found. Creating it...");
+        createState(sunStatusid, "", {
+            read: true,
+            write: true,
+            desc: "Wert",
+            type: "string"
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(sunStatusValueid))  {
+        log("Defined state '" + sunStatusValueid + "' not found. Creating it...");
+        createState(sunStatusValueid, "", {
+            read: true,
+            write: true,
+            desc: "Prozentualer Wert WS / LS",
+            type: "number"
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(sunMagicNumberid))  {
+        log("Defined state '" + sunMagicNumberid + "' not found. Creating it...");
+        createState(sunMagicNumberid, "", {
+            read: true,
+            write: true,
+            desc: "Magischer Wert zur Beurteilung der Sonnenstärke",
+            type: "number"
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(listid))  {
+        log("Defined state '" + listid + "' not found. Creating it...");
+        createState(listid, "", {
+            read: true,
+            write: true,
+            desc: "Werteliste",
+            type: "string"
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(anzid))  {
+        log("Defined state '" + anzid + "' not found. Creating it...");
+        createState(anzid, 0, {
+            read: true,
+            write: true,
+            desc: "Dauer der Periode in Minuten",
+            type: "number",
+            min: 0,
+            def: 0
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(rawWSid))  {
+        log("Defined state '" + rawWSid + "' not found. Creating it...");
+        createState(rawWSid, 0, {
+            read: true,
+            write: true,
+            desc: "Original Messwert der Wetterstation (Helligkeit)",
+            type: "number",
+            min: 0,
+            def: 0
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(rawLSid))  {
+        log("Defined state '" + rawLSid + "' not found. Creating it...");
+        createState(rawLSid, 0, {
+            read: true,
+            write: true,
+            desc: "Original Messwert des Lichtsensors (Helligkeit)",
+            type: "number",
+            min: 0,
+            def: 0
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(rawBMid))  {
+        log("Defined state '" + rawBMid + "' not found. Creating it...");
+        createState(rawBMid, 0, {
+            read: true,
+            write: true,
+            desc: "Original Messwert des Bewegungsmelder Süd (Helligkeit)",
+            type: "number",
+            min: 0,
+            def: 0
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(rawWSNormid))  {
+        log("Defined state '" + rawWSNormid + "' not found. Creating it...");
+        createState(rawWSNormid, 0, {
+            read: true,
+            write: true,
+            desc: "Original Messwert (normiert) der Wetterstation (Helligkeit)",
+            type: "number",
+            min: 0,
+            def: 0
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(rawLSNormid))  {
+        log("Defined state '" + rawLSNormid + "' not found. Creating it...");
+        createState(rawLSNormid, 0, {
+            read: true,
+            write: true,
+            desc: "Original Messwert (normiert) des Lichtsensors (Helligkeit)",
+            type: "number",
+            min: 0,
+            def: 0
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(rawElevationid))  {
+        log("Defined state '" + rawElevationid + "' not found. Creating it...");
+        createState(rawElevationid, 0, {
+            read: true,
+            write: true,
+            desc: "Originaler Wert der Elevation aus ShutterControl",
+            type: "number",
+            min: 0,
+            def: 0
+        });
+        minimumOneCreated = true;
+    }
+    if(!existsState(rawTeslaSolarPowerid))  {
+        log("Defined state '" + rawTeslaSolarPowerid + "' not found. Creating it...");
+        createState(rawTeslaSolarPowerid, 0, {
+            read: true,
+            write: true,
+            desc: "Originaler Wert der aktuellen Solarproduktion",
+            type: "number",
+            min: 0,
+            def: 0
+        });
+        minimumOneCreated = true;
+    }
+    if (minimumOneCreated) log('All states are now created...');
+}
+
+// ReturnValue definieren
+var returnValue = {
+  "raw" : {
+    "illumination_WS" : 0,
+    "illumination_LS" : 0,
+    "illumination_BM" : 0,
+    "illumination_WS_norm" : 0,
+    "illumination_LS_norm" : 0,
+    "elevation" : 0,
+    "teslaSolarPower" : 0
+  },
+  "illumination" : 0,       // Helligkeitswert
+  "sunStatus" : "unknown",  // sonnig oder wolkig
+  "sunStatusValue" : 0,     // Prozentualer Wert
+  "sunMagicNumber" : 0,     // Magic Number
+  "sunStatusFaktor" : 1     // Faktor
+}
+
+function calc_sunStatusValue(val_WS, val_LS) {
+  let val_WS_norm = (val_WS < 1) ? 1 : val_WS;
+  let val_LS_norm = (val_LS < 1) ? 1 : val_LS;
+  return parseFloat((val_LS_norm * 100 / val_WS_norm).toFixed(0));
+}
+
+function calc_sunMagicNumber(val_WS, val_Elevation) {
+  let val_WS_norm = (val_WS < 1) ? 1 : val_WS;
+  let val_norm_Elevation = (val_Elevation < 1) ? 1 : val_Elevation;
+  //let val_norm_Elevation = Math.abs(val_Elevation);
+  return parseFloat((val_WS_norm / val_norm_Elevation).toFixed(1));;
+}
+
+function calc_average() {
+  // Wetterstation
+  var val_WS_illumination        = toFloat(getState(dp_WS_illumination).val);
+  if (isNaN(val_WS_illumination)) {
+      val_WS_illumination = 0;
+  }
+  var val_WS_illumination_status = getState(dp_WS_illumination_status).val;
+
+  var val_WS_unreach             = getState(dp_WS_unreach).val;
+  var val_WS_temperature         = getState(dp_WS_temperature).val;
+
+  // Helligkeitssensor
+  var val_LS_illumination        = getState(dp_LS_illumination).val;
+  var val_LS_illumination_status = getState(dp_LS_illumination_status).val;
+  var val_LS_unreach             = getState(dp_LS_unreach).val;
+
+  // Bewegungsmelder Terasse
+  var val_BM_illumination        = getState(dp_BM_illumination).val;
+  var val_BM_illumination_status = getState(dp_BM_illumination_status).val;
+  var val_BM_unreach             = getState(dp_BM_unreach).val;
+
+  // Elevation
+  var val_Elevation              = getState(dp_Elevation).val;
+
+  // Tesla Solar Power
+  var val_TeslaSolarPower        = getState(dp_Tesla_solar_Power).val;
+
+  returnValue.raw.illumination_WS = val_WS_illumination;
+  returnValue.raw.illumination_LS = val_LS_illumination;
+  returnValue.raw.illumination_BM = val_BM_illumination;
+  returnValue.raw.elevation       = val_Elevation;
+  returnValue.raw.teslaSolarPower = val_TeslaSolarPower;
+
+  //log('VALUES OF Illum: WS: [val = ' + val_norm_WS_illumination + ' (' + val_WS_illumination + ') | status = ' + val_WS_illumination_status + ' | unreach = ' + val_WS_unreach + '] / LS: [val = ' + val_LS_illumination + ' | status = ' + val_LS_illumination_status + ' | unreach = ' + val_LS_unreach + ']');
+
+  // Nachkommastellen bedeutet folgende 9 Bit (IHGFEDCBA):
+  // I256:  0=Bewegungsmelder okay 1=Bewegungsmelder unreach
+  // H128:  0=Helligkeitssensor okay 1=Helligkeitssensor unreach
+  // G64:   0=Wetterstation okay 1=Wetterstation unreach
+  // F32:   0=Bewegungsmelder kein overflow 1=Bewegungsmelder overflow
+  // E16:   0=Helligkeitssensor kein overflow 1=Helligkeitssensor overflow
+  // D8:    0=Wetterstation kein overflow 1=Wetterstation overflow
+  // C4:    0=kein Temperaturzuschlag 27 1=Temperaturzuschlag >=27
+  // B2:    0=kein Temperaturzuschlag 22 1=Temperaturzuschlag >=22
+  // A1:    0=Wolking 1=Sonnig
+
+  var statusBits = 0;
+  var statusBits_String = "";
+  var temperature_correctionA = 1;
+  var temperature_correctionB = 1;
+  var sunstatusFaktor = 1;
+  var sunstatusValue = 0.0;
+  var sunMagicNumber = 0.0;
+
+  if (val_BM_unreach != 0) { statusBits = statusBits + 256; statusBits_String = statusBits_String + "1"; } else { statusBits_String = statusBits_String + "0"; }
+  if (val_LS_unreach != 0) { statusBits = statusBits + 128; statusBits_String = statusBits_String + "1"; } else { statusBits_String = statusBits_String + "0"; }
+  if (val_WS_unreach != 0) { statusBits = statusBits + 64; statusBits_String = statusBits_String + "1"; } else { statusBits_String = statusBits_String + "0"; }
+  if (val_BM_illumination_status != 0) { statusBits = statusBits + 32; statusBits_String = statusBits_String + "1"; } else { statusBits_String = statusBits_String + "0"; }
+  if (val_LS_illumination_status != 0) { statusBits = statusBits + 16; statusBits_String = statusBits_String + "1"; } else { statusBits_String = statusBits_String + "0"; }
+  if (val_WS_illumination_status != 0) { statusBits = statusBits + 8; statusBits_String = statusBits_String + "1"; } else { statusBits_String = statusBits_String + "0"; }
+  if (val_WS_temperature >= 27) { statusBits = statusBits + 4; temperature_correctionA = 1.3; statusBits_String = statusBits_String + "1"; } else { statusBits_String = statusBits_String + "0"; }
+  if (val_WS_temperature >= 22) { statusBits = statusBits + 2; temperature_correctionB = 1.1; statusBits_String = statusBits_String + "1"; } else { statusBits_String = statusBits_String + "0"; }
+  if (val_WS_illumination > 0) {
+    sunstatusValue = calc_sunStatusValue(val_WS_illumination, val_LS_illumination);
+    sunMagicNumber = calc_sunMagicNumber(val_WS_illumination, val_Elevation);
+
+    returnValue.sunStatusValue = sunstatusValue;
+    if (val_WS_illumination > 5000 || sunstatusValue < 100) {
+      statusBits = statusBits + 1;
+      returnValue.sunstatusFaktor = 1;
+      returnValue.sunStatus = "sonnig";
+      statusBits_String = statusBits_String + "1";
+    }
+    else {
+      returnValue.sunstatusFaktor = 0.9;
+      returnValue.sunStatus = "wolkig";
+      statusBits_String = statusBits_String + "0";
+    }
+  }
+  else {
+    returnValue.sunStatusValue = 0;
+    returnValue.sunstatusFaktor = 1;
+    returnValue.sunStatus = "Nacht";
+    statusBits_String = statusBits_String + "0";
+  }
+
+  // Wert der Wetterstation normieren
+  // Wert liegt zwischen 0 und 100000. Umrechnung erfolgt ab 6000 geteilt
+  // durch 10, d.h. 8000 wird zu 8200, 11000 wird zu 10100 und 25000 wird zu 11500
+
+  const breakValue_WS = 20000;
+  var val_norm_WS_illumination   = val_WS_illumination;
+  if (val_WS_illumination > breakValue_WS) {
+    val_norm_WS_illumination = breakValue_WS + (val_WS_illumination - breakValue_WS) / 50
+  }
+  const breakValue_LS = 10000;
+  var val_norm_LS_illumination = val_LS_illumination;
+  if (val_LS_illumination > breakValue_LS) {
+    val_norm_LS_illumination = breakValue_LS + (val_LS_illumination - breakValue_LS) / 50
+  }
+  returnValue.raw.illumination_WS_norm = val_norm_WS_illumination;
+  returnValue.raw.illumination_LS_norm = val_norm_LS_illumination;
+
+  // Returnwert für Illumination berechnen und normieren
+  returnValue.illumination = Math.round(((val_norm_WS_illumination + val_norm_LS_illumination) / 2) * temperature_correctionA * temperature_correctionB * sunstatusFaktor) + (statusBits / 1000);
+  returnValue.sunMagicNumber = sunMagicNumber;
+
+  log("val_WS_illumination=" + val_WS_illumination + " (norm: " + val_norm_WS_illumination + ") / val_LS_illumination=" + val_LS_illumination + " (norm: " + val_norm_LS_illumination + ") / mix = " + Math.round((val_norm_WS_illumination + val_norm_LS_illumination) / 2) + " / statusBits=" + statusBits + " (" + statusBits_String + ") / returnValue = (" + returnValue.illumination + "/" + returnValue.sunStatus+ "/" + val_WS_illumination + "|" + val_LS_illumination + "|" + returnValue.sunStatusValue + "/sS:" + returnValue.sunStatusFaktor + "/sM:" + returnValue.sunMagicNumber + ")");
+
+  if (val_WS_illumination_status != 0 || val_WS_unreach != 0) {
+    log('Illumination based only on LS => ret_val = ' + val_norm_LS_illumination + ' (LS_status = ' + val_LS_illumination_status + ') [WS:val='+ val_norm_WS_illumination +'|status=' + val_WS_illumination_status + '|unreach=' + val_WS_unreach + ']');
+    sunstatusFaktor = 1;
+    returnValue.illumination = Math.round(val_norm_LS_illumination * temperature_correctionA * temperature_correctionB * sunstatusFaktor) + statusBits;
+  }
+  if (val_LS_illumination_status != 0 || val_LS_unreach != 0) {
+    log('Illumination based only on WS => ret_val = ' + val_norm_WS_illumination + '(' + val_WS_illumination + ') (WS_status = ' + val_WS_illumination_status + ') [LS:val='+ val_norm_LS_illumination +'|status=' + val_LS_illumination_status + '|unreach=' + val_LS_unreach + ']');
+    sunstatusFaktor = 1;
+    returnValue.illumination = Math.round(val_norm_WS_illumination * temperature_correctionA * temperature_correctionB * sunstatusFaktor) + statusBits;
+  }
+  return returnValue;
 }
 
 function calc() {
   list.pop();
-  var x = getState(dp).val;
-  list.unshift(x);
+  var calcResult = calc_average();
+  list.unshift(calcResult.illumination);
   setState(listid, list.toString());
-  var min = x;
-  var max = x;
-  var sum = 0.0;
+  let min = calcResult.illumination;
+  let max = calcResult.illumination;
+  let sum = 0.0;
   for (var i = 0; i < n; i++) {
-    var s = parseFloat(list[i]);
-   if (s < min) min = s;
-   if (s > max) max = s;
-   sum = sum + s;
+    let s = parseFloat(list[i]);
+    if (s < min) min = s;
+    if (s > max) max = s;
+    sum = sum + s;
   }
-  var actAv = getState(avrid).val;
-  var newAv = parseFloat((sum / n).toFixed(0));
-  setState(xid, x);
+  let oldAv = parseFloat(getState(avrid).val);
+  let newAv = parseFloat((sum / n).toFixed(0));
+  setState(actid, calcResult.illumination);
   setState(minid, min);
   setState(maxid, max);
-  if (actAv != newAv) setState(avrid, newAv);
+  setState(sunStatusid, calcResult.sunStatus);
+  setState(sunStatusValueid, calcResult.sunStatusValue);
+  setState(sunMagicNumberid, calcResult.sunMagicNumber);
+  // RAW Werte setzen
+  // **** You are assigning a string to the state "0_userdata.0.calculation.illumination.raw.illumination_WS" which expects a number. Please fix your code to use a number or change the state type to string. This warning might become an error in future versions.
+  setState(rawWSid, calcResult.raw.illumination_WS, true);
+  setState(rawLSid, calcResult.raw.illumination_LS, true);
+  setState(rawBMid, calcResult.raw.illumination_BM, true);
+  // **** You are assigning a string to the state "0_userdata.0.calculation.illumination.raw.illumination_WS_norm" which expects a number. Please fix your code to use a number or change the state type to string. This warning might become an error in future versions.
+  setState(rawWSNormid, calcResult.raw.illumination_WS_norm, true);
+  setState(rawLSNormid, calcResult.raw.illumination_LS_norm, true);
+  setState(rawElevationid, calcResult.raw.elevation);
+  setState(rawTeslaSolarPowerid, calcResult.raw.teslaSolarPower);
+
+  if (oldAv != newAv) {
+    setState(avrid, newAv);
+    // CCU SV Sonnenschutz Korrektur
+    var val_sunProtectValue = getState(dp_sunProtectValue).val;
+    var newSunProtectValue = 0;
+    // Den Wert für Sonnenschutz auf Basis des durchschnittlichen Helligkeitwertes setzen
+    if (newAv + val_sunProtectValue > 0) {
+      newSunProtectValue = newAv + val_sunProtectValue;
+    }
+    setState(sunProtectValueID, newSunProtectValue);
+    log('New average calculated: newAv=' + newAv + ' [' + newSunProtectValue + '] (oldAv = ' + oldAv + ')');
+  }
 }
 
 // bei Skriptstart
-if(!existsState(anzid))  {
-    log('Defined states not found. Creating states...');
-    createStates(); // Datenpunkte erstmal anlegen
-}
+createStates(); // Datenpunkte erstmal prüfen und ggf.anlegen
+
 var iAnz = getState(anzid).val;
 if (iAnz != T) {
     // T hat sich geändert. Werteliste zurücksetzen.
     setState(anzid, T);
     setState(listid, '');
-    log('Reset of illumination average. New value = ' + T + ', old value = ' + iAnz);
+    log("Reset of illumination average. New value = " + T + ", old value = " + iAnz);
 }
 var slist = getState(listid).val;
 if (slist) {
     list = slist.split(",");
 } else {
-    // 1. Script start: Liste und String-Datenpunkt füllen
-    var x = getState(dp).val;
+    // 1. Script Start: Liste und String-Datenpunkt füllen
+    var calcResult = calc_average();
     log('Starting illumination calculation with n=' + n);
-    for (var i = 0; i < n; i++) list[i] = x;
+    for (var i = 0; i < n; i++) list[i] = calcResult.illumination;
     log('List was created at >' + listid + '<. List=' + list);
 }
 
