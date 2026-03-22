@@ -14,7 +14,7 @@
 // tgl. 12:00 Uhr => alle wach, d.h. Auto-Modus eingeschaltet
 // tgl. 01:00 Uhr => alle schlafen, d.h. Auto-Modus unterbrochen
 //
-const sVersion = "V1.2.10";
+const sVersion = "V1.2.11";
 const sScriptname = "ShutterControlControl";
 const sAuthors = "Tweety";
 const sCopyrightYear = "2024-2026";
@@ -424,12 +424,12 @@ function checkShutterArea(area, jetzt, direction) {
     case "up":
       moveTime = getState(area.dpUpTime).val;
       dpButton = area.dpButtonUp;
-      maxDelta = 7;
+      maxDelta = 95;
     break;
     case "down":
       moveTime = getState(area.dpDownTime).val;
       dpButton = area.dpButtonDown;
-      maxDelta = 5;
+      maxDelta = 35;
     break;
     default:
       log("SCC ERROR checkZeit(): In Case DEFAULT mit direction ='" + direction + "'","error");
