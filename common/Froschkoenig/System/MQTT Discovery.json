@@ -1,6 +1,7 @@
 // ==========================================================
 // Homematic -> Home Assistant MQTT Discovery
 // ioBroker Javascript Adapter
+// Version 2.0 TOW / ChatGPT
 // ==========================================================
 
 const mqttPrefix = "homeassistant";
@@ -12,9 +13,10 @@ const statePrefix = "iobroker";
 // ==========================================================
 
 function publishDiscovery(id, type, config) {
+
     const topic = `${mqttPrefix}/${type}/${id}/config`;
 
-    sendTo("mqtt.0", "sendMessage2Client", {
+    sendTo(mqttInstance, "sendMessage2Client", {
         topic: topic,
         message: JSON.stringify(config),
         qos: 0,
@@ -27,29 +29,82 @@ function publishDiscovery(id, type, config) {
 // ==========================================================
 
 function sanitize(str) {
+
     return String(str)
         .replace(/\s+/g, "_")
         .replace(/[^\w]/g, "_")
+        .replace(/_+/g, "_")
         .toLowerCase();
 }
 
-function getDeviceInfo(deviceAddress, deviceName) {
+// ==========================================================
+// Gerätenamen / Modell holen
+// ==========================================================
+
+function getDeviceInfo(deviceAddress) {
+
+    let deviceName = deviceAddress;
+    let model = "Homematic";
+
+    try {
+
+        const deviceObj = getObject(`hm-rpc.0.${deviceAddress}`);
+
+        if (deviceObj && deviceObj.common) {
+
+            // Modell
+            if (deviceObj.common.type) {
+                model = deviceObj.common.type;
+            }
+
+            // Gerätename
+            deviceName = `${model}_${deviceAddress}`;
+        }
+
+    } catch (e) {
+
+        log(`Fehler bei DeviceInfo ${deviceAddress}: ${e}`, "warn");
+    }
+
     return {
         identifiers: [deviceAddress],
         name: deviceName,
         manufacturer: "Homematic",
-        model: "CCU Device"
+        model: model
     };
 }
 
-function getObjectName(id) {
-    const obj = getObject(id);
+// ==========================================================
+// Schönen Entitätsnamen holen
+// ==========================================================
 
-    if (obj && obj.common && obj.common.name) {
-        return obj.common.name;
-    }
+function getEntityName(id, fallback) {
 
-    return id;
+    try {
+
+        const obj = getObject(id);
+
+        if (obj && obj.common && obj.common.name) {
+
+            if (typeof obj.common.name === "string") {
+                return obj.common.name;
+            }
+
+            if (typeof obj.common.name === "object") {
+
+                if (obj.common.name.de) {
+                    return obj.common.name.de;
+                }
+
+                if (obj.common.name.en) {
+                    return obj.common.name.en;
+                }
+            }
+        }
+
+    } catch (e) {}
+
+    return fallback;
 }
 
 // ==========================================================
@@ -68,10 +123,26 @@ $('hm-rpc.0.*').each(function (id) {
     const channel = parts[3];
     const state = parts[4];
 
-    const fullName = getObjectName(id);
+    // Nur gewünschte States
+    const allowedStates = [
+        "STATE",
+        "LEVEL",
+        "TEMPERATURE",
+        "ACTUAL_TEMPERATURE",
+        "PRESS_SHORT",
+        "PRESS_LONG",
+        "HUMIDITY",
+        "LOWBAT",
+        "UNREACH"
+    ];
 
-    const baseId = sanitize(deviceAddress + "_" + channel);
-    const uniqueId = sanitize(id);
+    if (!allowedStates.includes(state)) return;
+
+    const entityName =
+        getEntityName(id, `${deviceAddress} ${state}`);
+
+    const uniqueId =
+        sanitize(id);
 
     const mqttStateTopic =
         `${statePrefix}/${id.replace(/\./g, "/")}`;
@@ -80,7 +151,7 @@ $('hm-rpc.0.*').each(function (id) {
         `command/${statePrefix}/${id.replace(/\./g, "/")}`;
 
     const deviceInfo =
-        getDeviceInfo(deviceAddress, fullName);
+        getDeviceInfo(deviceAddress);
 
     // ======================================================
     // STATE
@@ -92,7 +163,7 @@ $('hm-rpc.0.*').each(function (id) {
             uniqueId,
             "switch",
             {
-                name: fullName,
+                name: entityName,
                 unique_id: uniqueId,
 
                 state_topic: mqttStateTopic,
@@ -116,7 +187,7 @@ $('hm-rpc.0.*').each(function (id) {
             uniqueId,
             "light",
             {
-                name: fullName,
+                name: entityName,
                 unique_id: uniqueId,
 
                 state_topic: mqttStateTopic,
@@ -137,14 +208,16 @@ $('hm-rpc.0.*').each(function (id) {
     // TEMPERATURE
     // ======================================================
 
-    if (state === "TEMPERATURE" ||
-        state === "ACTUAL_TEMPERATURE") {
+    if (
+        state === "TEMPERATURE" ||
+        state === "ACTUAL_TEMPERATURE"
+    ) {
 
         publishDiscovery(
             uniqueId,
             "sensor",
             {
-                name: fullName,
+                name: entityName,
                 unique_id: uniqueId,
 
                 state_topic: mqttStateTopic,
@@ -168,7 +241,7 @@ $('hm-rpc.0.*').each(function (id) {
             uniqueId,
             "sensor",
             {
-                name: fullName,
+                name: entityName,
                 unique_id: uniqueId,
 
                 state_topic: mqttStateTopic,
@@ -192,7 +265,7 @@ $('hm-rpc.0.*').each(function (id) {
             uniqueId,
             "binary_sensor",
             {
-                name: fullName,
+                name: entityName,
                 unique_id: uniqueId,
 
                 state_topic: mqttStateTopic,
@@ -201,6 +274,8 @@ $('hm-rpc.0.*').each(function (id) {
                 payload_off: "false",
 
                 device_class: "battery",
+
+                entity_category: "diagnostic",
 
                 device: deviceInfo
             }
@@ -217,7 +292,7 @@ $('hm-rpc.0.*').each(function (id) {
             uniqueId,
             "binary_sensor",
             {
-                name: fullName,
+                name: entityName,
                 unique_id: uniqueId,
 
                 state_topic: mqttStateTopic,
@@ -226,6 +301,8 @@ $('hm-rpc.0.*').each(function (id) {
                 payload_off: "false",
 
                 device_class: "connectivity",
+
+                entity_category: "diagnostic",
 
                 device: deviceInfo
             }
@@ -285,5 +362,7 @@ $('hm-rpc.0.*').each(function (id) {
     }
 
 });
+
+// ==========================================================
 
 log("Homematic MQTT Discovery vollständig erstellt", "info");
