@@ -1,0 +1,289 @@
+// ==========================================================
+// Homematic -> Home Assistant MQTT Discovery
+// ioBroker Javascript Adapter
+// ==========================================================
+
+const mqttPrefix = "homeassistant";
+const mqttInstance = "mqtt.0";
+const statePrefix = "iobroker";
+
+// ==========================================================
+// MQTT Discovery senden
+// ==========================================================
+
+function publishDiscovery(id, type, config) {
+    const topic = `${mqttPrefix}/${type}/${id}/config`;
+
+    sendTo("mqtt.0", "sendMessage2Client", {
+        topic: topic,
+        message: JSON.stringify(config),
+        qos: 0,
+        retain: true
+    });
+}
+
+// ==========================================================
+// Helper
+// ==========================================================
+
+function sanitize(str) {
+    return String(str)
+        .replace(/\s+/g, "_")
+        .replace(/[^\w]/g, "_")
+        .toLowerCase();
+}
+
+function getDeviceInfo(deviceAddress, deviceName) {
+    return {
+        identifiers: [deviceAddress],
+        name: deviceName,
+        manufacturer: "Homematic",
+        model: "CCU Device"
+    };
+}
+
+function getObjectName(id) {
+    const obj = getObject(id);
+
+    if (obj && obj.common && obj.common.name) {
+        return obj.common.name;
+    }
+
+    return id;
+}
+
+// ==========================================================
+// Discovery erzeugen
+// ==========================================================
+
+$('hm-rpc.0.*').each(function (id) {
+
+    if (!existsObject(id)) return;
+
+    const parts = id.split('.');
+
+    if (parts.length < 5) return;
+
+    const deviceAddress = parts[2];
+    const channel = parts[3];
+    const state = parts[4];
+
+    const fullName = getObjectName(id);
+
+    const baseId = sanitize(deviceAddress + "_" + channel);
+    const uniqueId = sanitize(id);
+
+    const mqttStateTopic =
+        `${statePrefix}/${id.replace(/\./g, "/")}`;
+
+    const mqttCommandTopic =
+        `command/${statePrefix}/${id.replace(/\./g, "/")}`;
+
+    const deviceInfo =
+        getDeviceInfo(deviceAddress, fullName);
+
+    // ======================================================
+    // STATE
+    // ======================================================
+
+    if (state === "STATE") {
+
+        publishDiscovery(
+            uniqueId,
+            "switch",
+            {
+                name: fullName,
+                unique_id: uniqueId,
+
+                state_topic: mqttStateTopic,
+                command_topic: mqttCommandTopic,
+
+                payload_on: "true",
+                payload_off: "false",
+
+                device: deviceInfo
+            }
+        );
+    }
+
+    // ======================================================
+    // LEVEL (Dimmer)
+    // ======================================================
+
+    if (state === "LEVEL") {
+
+        publishDiscovery(
+            uniqueId,
+            "light",
+            {
+                name: fullName,
+                unique_id: uniqueId,
+
+                state_topic: mqttStateTopic,
+                command_topic: mqttCommandTopic,
+
+                brightness: true,
+                brightness_scale: 1,
+
+                payload_on: "1",
+                payload_off: "0",
+
+                device: deviceInfo
+            }
+        );
+    }
+
+    // ======================================================
+    // TEMPERATURE
+    // ======================================================
+
+    if (state === "TEMPERATURE" ||
+        state === "ACTUAL_TEMPERATURE") {
+
+        publishDiscovery(
+            uniqueId,
+            "sensor",
+            {
+                name: fullName,
+                unique_id: uniqueId,
+
+                state_topic: mqttStateTopic,
+
+                unit_of_measurement: "°C",
+                device_class: "temperature",
+                state_class: "measurement",
+
+                device: deviceInfo
+            }
+        );
+    }
+
+    // ======================================================
+    // HUMIDITY
+    // ======================================================
+
+    if (state === "HUMIDITY") {
+
+        publishDiscovery(
+            uniqueId,
+            "sensor",
+            {
+                name: fullName,
+                unique_id: uniqueId,
+
+                state_topic: mqttStateTopic,
+
+                unit_of_measurement: "%",
+                device_class: "humidity",
+                state_class: "measurement",
+
+                device: deviceInfo
+            }
+        );
+    }
+
+    // ======================================================
+    // LOWBAT
+    // ======================================================
+
+    if (state === "LOWBAT") {
+
+        publishDiscovery(
+            uniqueId,
+            "binary_sensor",
+            {
+                name: fullName,
+                unique_id: uniqueId,
+
+                state_topic: mqttStateTopic,
+
+                payload_on: "true",
+                payload_off: "false",
+
+                device_class: "battery",
+
+                device: deviceInfo
+            }
+        );
+    }
+
+    // ======================================================
+    // UNREACH
+    // ======================================================
+
+    if (state === "UNREACH") {
+
+        publishDiscovery(
+            uniqueId,
+            "binary_sensor",
+            {
+                name: fullName,
+                unique_id: uniqueId,
+
+                state_topic: mqttStateTopic,
+
+                payload_on: "true",
+                payload_off: "false",
+
+                device_class: "connectivity",
+
+                device: deviceInfo
+            }
+        );
+    }
+
+    // ======================================================
+    // PRESS_SHORT
+    // ======================================================
+
+    if (state === "PRESS_SHORT") {
+
+        publishDiscovery(
+            uniqueId,
+            "device_automation",
+            {
+                automation_type: "trigger",
+
+                topic: mqttStateTopic,
+
+                type: "button_short_press",
+                subtype: channel,
+
+                payload: "true",
+
+                device: deviceInfo,
+
+                unique_id: uniqueId
+            }
+        );
+    }
+
+    // ======================================================
+    // PRESS_LONG
+    // ======================================================
+
+    if (state === "PRESS_LONG") {
+
+        publishDiscovery(
+            uniqueId,
+            "device_automation",
+            {
+                automation_type: "trigger",
+
+                topic: mqttStateTopic,
+
+                type: "button_long_press",
+                subtype: channel,
+
+                payload: "true",
+
+                device: deviceInfo,
+
+                unique_id: uniqueId
+            }
+        );
+    }
+
+});
+
+log("Homematic MQTT Discovery vollständig erstellt", "info");
