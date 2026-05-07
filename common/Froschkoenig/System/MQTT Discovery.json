@@ -2,6 +2,17 @@
 // Homematic -> Home Assistant MQTT Discovery
 // ioBroker Javascript Adapter
 // Version 2.0 TOW / ChatGPT
+//
+// STATE                switch
+// LEVEL                light
+// TEMPERATURE          sensor
+// ACTUAL_TEMPERATURE   sensor
+// HUMIDITY             sensor
+// LOWBAT               binary_sensor
+// LOW_BAT              binary_sensor
+// UNREACH              binary_sensor
+// PRESS_SHORT          device_automation
+// PRESS_LONG           device_automation
 // ==========================================================
 
 const mqttPrefix = "homeassistant";
@@ -41,20 +52,20 @@ function sanitize(str) {
 // Gerätenamen / Modell holen
 // ==========================================================
 
-function getDeviceInfo(deviceAddress) {
+function getDeviceInfo(adapterAddress, deviceAddress) {
 
     let deviceName = deviceAddress;
     let model = "Homematic";
 
     try {
 
-        const deviceObj = getObject(`hm-rpc.0.${deviceAddress}`);
+        const deviceObj = getObject(`hm-rpc.${adapterAddress}.${deviceAddress}`);
 
-        if (deviceObj && deviceObj.common) {
+        if (deviceObj && deviceObj.native) {
 
-            // Modell
-            if (deviceObj.common.type) {
-                model = deviceObj.common.type;
+            // Type
+            if (deviceObj.native.TYPE) {             
+                model = deviceObj.native.TYPE;
             }
 
             // Gerätename
@@ -109,9 +120,11 @@ function getEntityName(id, fallback) {
 
 // ==========================================================
 // Discovery erzeugen
+// Beispiel: hm-rpc.0.0001D3C996150C.0.ACTUAL_TEMPERATURE
+//           0     .1.2             .3.4
 // ==========================================================
 
-$('hm-rpc.0.*').each(function (id) {
+$('hm-rpc.*').each(function (id) {
 
     if (!existsObject(id)) return;
 
@@ -119,6 +132,7 @@ $('hm-rpc.0.*').each(function (id) {
 
     if (parts.length < 5) return;
 
+    const adapterAddress = parts[1];
     const deviceAddress = parts[2];
     const channel = parts[3];
     const state = parts[4];
@@ -151,7 +165,7 @@ $('hm-rpc.0.*').each(function (id) {
         `command/${statePrefix}/${id.replace(/\./g, "/")}`;
 
     const deviceInfo =
-        getDeviceInfo(deviceAddress);
+        getDeviceInfo(adapterAddress, deviceAddress);
 
     // ======================================================
     // STATE
@@ -259,7 +273,10 @@ $('hm-rpc.0.*').each(function (id) {
     // LOWBAT
     // ======================================================
 
-    if (state === "LOWBAT") {
+    if (
+        state === "LOWBAT" ||
+        state === "LOW_BAT"
+    ) {
 
         publishDiscovery(
             uniqueId,
