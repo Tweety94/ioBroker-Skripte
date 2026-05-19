@@ -2,7 +2,6 @@
 // Homematic -> Home Assistant MQTT Discovery
 // ioBroker Javascript Adapter
 // Version 2.0 TOW / ChatGPT
-//
 // STATE                switch
 // LEVEL                light
 // TEMPERATURE          sensor
