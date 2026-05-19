@@ -142,10 +142,11 @@ $('hm-rpc.*').each(function (id) {
         "LEVEL",
         "TEMPERATURE",
         "ACTUAL_TEMPERATURE",
-        "PRESS_SHORT",
-        "PRESS_LONG",
         "HUMIDITY",
         "LOWBAT",
+        "LOW_BAT",
+        "PRESS_SHORT",
+        "PRESS_LONG",
         "UNREACH"
     ];
 
@@ -299,33 +300,6 @@ $('hm-rpc.*').each(function (id) {
     }
 
     // ======================================================
-    // UNREACH
-    // ======================================================
-
-    if (state === "UNREACH") {
-
-        publishDiscovery(
-            uniqueId,
-            "binary_sensor",
-            {
-                name: entityName,
-                unique_id: uniqueId,
-
-                state_topic: mqttStateTopic,
-
-                payload_on: "true",
-                payload_off: "false",
-
-                device_class: "connectivity",
-
-                entity_category: "diagnostic",
-
-                device: deviceInfo
-            }
-        );
-    }
-
-    // ======================================================
     // PRESS_SHORT
     // ======================================================
 
@@ -373,6 +347,33 @@ $('hm-rpc.*').each(function (id) {
                 device: deviceInfo,
 
                 unique_id: uniqueId
+            }
+        );
+    }
+
+    // ======================================================
+    // UNREACH
+    // ======================================================
+
+    if (state === "UNREACH") {
+
+        publishDiscovery(
+            uniqueId,
+            "binary_sensor",
+            {
+                name: entityName,
+                unique_id: uniqueId,
+
+                state_topic: mqttStateTopic,
+
+                payload_on: "true",
+                payload_off: "false",
+
+                device_class: "connectivity",
+
+                entity_category: "diagnostic",
+
+                device: deviceInfo
             }
         );
     }
